@@ -453,17 +453,33 @@
   <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
 </nav>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-/* ---------- Almacenamiento persistente ---------- */
+  const firebaseConfig = {
+    apiKey: "AIzaSyCoe2So4sBEMTsza3UvRRW_-BH0XA0uGWE",
+    authDomain: "lonches-gemma.firebaseapp.com",
+    projectId: "lonches-gemma",
+    storageBucket: "lonches-gemma.firebasestorage.app",
+    messagingSenderId: "879803932056",
+    appId: "1:879803932056:web:1d703cc5c0b0cf55e41fed"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+<script>
+/* ---------- Almacenamiento persistente (Firebase Firestore) ---------- */
 async function cargar(clave, porDefecto){
   try{
-    const r = await window.storage.get(clave, false);
-    return r ? JSON.parse(r.value) : porDefecto;
-  }catch(e){ return porDefecto; }
+    const snap = await db.collection('lonches_gemma').doc(clave).get();
+    if(snap.exists) return snap.data().items;
+    return porDefecto;
+  }catch(e){ console.error('error al cargar', clave, e); return porDefecto; }
 }
 async function guardar(clave, valor){
-  try{ await window.storage.set(clave, JSON.stringify(valor), false); }
-  catch(e){ console.error('storage error', e); }
+  try{
+    await db.collection('lonches_gemma').doc(clave).set({items: valor, actualizado: new Date().toISOString()});
+  }catch(e){ console.error('error al guardar', clave, e); }
 }
 
 let ventas = [];
