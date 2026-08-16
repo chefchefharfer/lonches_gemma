@@ -1,644 +1,1117 @@
 <!DOCTYPE html>
-<html lang="es-MX">
+<html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Lonches Gemma — Control diario del negocio</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Lonches Gemma</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root{
-    --bg:#F5F1E8;
-    --panel:#FFFFFF;
-    --sidebar:#FFFFFF;
-    --border:#E6E1D3;
-    --text:#2B2B26;
-    --muted:#8B8B7E;
-    --accent:#E7A972;
-    --accent-dark:#C97A3E;
-    --row-hl:#EDEAE1;
-    --chip:#EFECE3;
-    --danger:#C0392B;
-    --green:#3D6B4A;
+    --salsa: #C6362A;
+    --naranja: #E8923A;
+    --sidebar-bg: #17241F;
+    --sidebar-bg-2: #1F332B;
+    --sidebar-text: #9DB0A8;
+    --sidebar-text-active: #FFFFFF;
+    --bg: #F4F6F5;
+    --card-bg: #FFFFFF;
+    --text: #1B241F;
+    --text-2: #667069;
+    --border: #E2E7E4;
+    --verde: #1F7A4D;
+    --verde-bg: #E7F5EC;
+    --rojo-neg: #C0392B;
+    --rojo-bg: #FCEAE7;
+    --chip-bg: #EEF1EF;
+    --radio: 10px;
+    --sombra: 0 1px 2px rgba(20,30,25,0.05), 0 1px 8px rgba(20,30,25,0.04);
+    --sidebar-w: 232px;
   }
   *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
   body{
-    margin:0;
     background:var(--bg);
-    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color:var(--text);
-    display:flex;
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:84px;
     min-height:100vh;
   }
-
-  /* ---------------- SIDEBAR (desktop) ---------------- */
-  aside.sidebar{
-    width:220px;
-    background:var(--sidebar);
-    border-right:1px solid var(--border);
-    padding:22px 0;
-    position:fixed;
-    top:0; bottom:0; left:0;
-  }
-  .brand{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:0 20px 22px;
-    font-family:"Playfair Display", Georgia, serif;
+  h1,h2,h3{
+    font-family:inherit;
     font-weight:700;
+    margin:0 0 4px 0;
+    letter-spacing:-0.01em;
     color:var(--text);
-    font-size:1rem;
-    line-height:1.2;
   }
-  .brand .logo{font-size:1.3rem;}
-  nav.sidenav a{
+  header.top{
+    background:var(--card-bg);
+    border-bottom:1px solid var(--border);
+    color:var(--text);
+    padding:14px 18px;
     display:flex;
     align-items:center;
-    gap:12px;
-    padding:12px 20px;
-    color:var(--muted);
-    text-decoration:none;
-    font-size:0.92rem;
-    border-left:3px solid transparent;
+    justify-content:space-between;
   }
-  nav.sidenav a.active{
-    background:var(--row-hl);
-    color:var(--text);
-    font-weight:600;
-    border-left-color:var(--accent-dark);
-  }
-  nav.sidenav a .ic{font-size:1rem; width:18px; text-align:center;}
-
-  /* ---------------- MAIN ---------------- */
-  main{
-    margin-left:220px;
-    flex:1;
-    padding:20px 28px 100px;
-    max-width:640px;
-  }
-  header.topbar{
-    background:linear-gradient(90deg, #EFEAD9 0%, #EFEAD9 55%, rgba(239,234,217,0) 100%),
-      url('https://images.unsplash.com/photo-1488477304112-4944851de03d?q=80&w=1200&auto=format&fit=crop') right center/cover no-repeat;
-    border-radius:16px;
-    padding:22px 26px;
-    margin-bottom:20px;
-  }
-  header.topbar h1{
-    margin:0;
-    font-family:"Playfair Display", Georgia, serif;
-    color:var(--text);
-    font-size:1.4rem;
-    text-align:center;
-  }
-  header.topbar .fecha{
-    text-align:center;
-    color:var(--muted);
-    font-size:0.85rem;
-    margin-top:4px;
+  header.top .marca{display:flex; align-items:center; gap:10px;}
+  header.top .marca .logo-emoji{font-size:20px;}
+  header.top h1{font-size:16px; color:var(--text); margin:0;}
+  header.top .admin{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600;}
+  header.top .admin .avatar{
+    width:28px; height:28px; border-radius:50%;
+    background:var(--sidebar-bg); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:13px;
   }
 
+  .banner{
+    background:var(--card-bg);
+    border-bottom:1px solid var(--border);
+    color:var(--text);
+    padding:18px 18px 20px 18px;
+    text-align:left;
+  }
+  .banner .eyebrow{
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--text-2); margin-bottom:4px;
+  }
+  .banner h2{font-size:21px; color:var(--text); margin:0;}
+  .banner p{margin:4px 0 0 0; font-size:13px; color:var(--text-2); font-weight:500; text-transform:capitalize;}
+
+  main{padding:16px;}
   .card{
-    background:var(--panel);
+    background:var(--card-bg);
     border:1px solid var(--border);
-    border-radius:14px;
-    padding:20px;
-    margin-bottom:16px;
+    border-radius:var(--radio);
+    padding:18px;
+    margin-bottom:14px;
+    box-shadow:var(--sombra);
   }
   .card h2{
-    margin:0 0 14px;
-    font-size:1rem;
-    font-weight:700;
+    font-size:12.5px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--text); font-weight:700; margin-bottom:14px;
   }
+  .card h3{font-size:13px; color:var(--text-2); margin-top:14px; text-transform:none; letter-spacing:0;}
+  .card .sub{font-size:12px; color:var(--text-2); margin:-8px 0 12px 0;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .stat{
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:14px 12px;
+    text-align:left;
+  }
+  .stat .num{font-size:22px; font-weight:800; color:var(--text); font-family:inherit;}
+  .stat .num.pos{color:var(--verde);}
+  .stat .num.neg{color:var(--rojo-neg);}
+  .stat .lbl{font-size:11px; color:var(--text-2); text-transform:uppercase; letter-spacing:0.04em; margin-top:3px;}
+
   label{
     display:block;
-    font-size:0.78rem;
-    color:var(--muted);
-    margin-bottom:5px;
+    font-size:12px;
+    color:var(--text-2);
+    margin:10px 0 4px 0;
+    font-weight:600;
   }
   input, select{
     width:100%;
     padding:10px 12px;
     border-radius:8px;
-    border:1px solid var(--border);
+    border:1.5px solid var(--border);
     background:#fff;
-    font-size:0.92rem;
     color:var(--text);
+    font-size:14.5px;
+    font-family:inherit;
   }
-  .field{margin-bottom:14px;}
-  .row-2{display:flex; gap:12px; margin-bottom:14px;}
-  .row-2 > div{flex:1;}
+  input:focus, select:focus{outline:none; border-color:var(--sidebar-bg);}
 
-  button.primary{
+  .btn{
     width:100%;
-    border:none;
+    margin-top:14px;
     padding:12px;
-    border-radius:10px;
-    font-size:0.95rem;
+    border:none;
+    border-radius:8px;
+    background:var(--salsa);
+    color:#fff;
+    font-size:14.5px;
     font-weight:700;
-    color:#5A3419;
-    background:var(--accent);
+    letter-spacing:0.01em;
+    font-family:inherit;
     cursor:pointer;
   }
-  button.primary:active{opacity:0.85;}
-
-  .stats-row{display:flex; gap:14px; margin-bottom:16px;}
-  .stat-box{
-    flex:1;
-    background:var(--chip);
-    border-radius:12px;
-    padding:16px;
-    text-align:center;
-  }
-  .stat-box .stat-label{font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;}
-  .stat-box .stat-value{font-size:1.5rem; font-weight:700; margin:4px 0;}
-  .stat-box .stat-sub{font-size:0.7rem; color:var(--muted);}
-
-  .hist-hint{font-size:0.78rem; color:var(--muted); margin:-8px 0 14px;}
-
-  .week-block{border-radius:10px; overflow:hidden; margin-bottom:8px; border:1px solid var(--border);}
-  .week-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:12px 14px;
-    background:var(--row-hl);
-    cursor:pointer;
-  }
-  .week-row .week-title{font-weight:700; font-size:0.92rem;}
-  .week-row .week-dates{font-size:0.75rem; color:var(--muted); font-weight:400;}
-  .week-row .week-meta{display:flex; align-items:center; gap:10px; font-size:0.85rem;}
-  .week-row .chev{transition:transform 0.15s ease; color:var(--muted);}
-  .week-block.open .chev{transform:rotate(180deg);}
-
-  .week-items{display:none;}
-  .week-block.open .week-items{display:block;}
-
-  .item-row{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:10px 14px;
-    border-top:1px solid var(--border);
-    cursor:pointer;
-  }
-  .item-row .item-name{font-weight:600; font-size:0.9rem;}
-  .item-row .item-sub{font-size:0.75rem; color:var(--muted);}
-  .item-row .item-right{display:flex; align-items:center; gap:8px;}
-  .item-chip{
-    background:var(--chip);
-    padding:4px 10px;
-    border-radius:999px;
-    font-size:0.82rem;
-    font-weight:600;
-  }
-  .del{background:none; border:none; color:var(--danger); cursor:pointer; font-size:1rem;}
-
-  .item-detail{
-    display:none;
-    padding:0 14px 12px 14px;
-    font-size:0.85rem;
+  .btn:hover{background:#AF2E24;}
+  .btn:active{opacity:0.9;}
+  .btn.secundario{
+    background:#fff;
     color:var(--text);
-    background:#fbfaf6;
-    line-height:1.7;
+    border:1.5px solid var(--border);
   }
-  .item-row.open + .item-detail{display:block;}
+  .btn.secundario:hover{background:var(--bg);}
+  .btn.chico{width:auto; padding:7px 12px; font-size:12.5px; margin-top:0;}
 
-  .empty-state{color:var(--muted); font-size:0.85rem; padding:10px 0;}
+  ul.lista{list-style:none; margin:10px 0 0 0; padding:0;}
+  ul.lista li{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--border);
+    font-size:13.5px;
+    gap:8px;
+  }
+  ul.lista li:last-child{border-bottom:none;}
+  ul.lista .izq{display:flex; flex-direction:column;}
+  ul.lista .izq b{font-size:14px; font-weight:600;}
+  ul.lista .izq span{color:var(--text-2); font-size:11.5px;}
+  ul.lista .der{display:flex; align-items:center; gap:8px; white-space:nowrap;}
+  .pill{
+    font-size:11px;
+    background:var(--chip-bg);
+    color:var(--text);
+    padding:3px 9px;
+    border-radius:999px;
+    font-weight:700;
+  }
+  .del{background:none; border:none; color:var(--rojo-neg); font-size:16px; padding:2px 4px; cursor:pointer;}
 
-  /* ---------------- views ---------------- */
-  .view{display:none;}
-  .view.active{display:block;}
+  .vacio{text-align:center; color:var(--text-2); font-size:13px; padding:14px 0;}
 
-  .placeholder{
-    color:var(--muted);
-    font-size:0.9rem;
-    padding:30px 10px;
+  .receta-item{display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--border); gap:8px;}
+  .receta-item input[type=text]{padding:6px 8px; font-size:12.5px; flex:1;}
+  .receta-item input[type=number]{padding:6px 8px; font-size:12.5px; width:80px; text-align:right;}
+  .receta-total{display:flex; justify-content:space-between; font-weight:800; padding-top:10px; margin-top:6px; border-top:2px solid var(--text); color:var(--text);}
+
+  /* Semanas colapsables */
+  .semana{border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden;}
+  .semana-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 14px; background:var(--bg); cursor:pointer;
+  }
+  .semana-header:hover{background:#EDF0EE;}
+  .semana-header .titulo{font-size:13.5px; font-weight:700; color:var(--text);}
+  .semana-header .titulo small{display:block; font-weight:500; font-size:11px; color:var(--text-2); margin-top:1px;}
+  .semana-header .resumen-mini{display:flex; align-items:center; gap:8px;}
+  .semana-header .chevron{transition:transform 0.2s; font-size:13px; color:var(--text-2);}
+  .semana.abierta .chevron{transform:rotate(90deg);}
+  .semana-body{max-height:0; overflow:hidden; transition:max-height 0.25s ease;}
+  .semana.abierta .semana-body{max-height:2000px;}
+  .semana-body ul.lista{padding:0 14px; margin:0;}
+  .semana-body ul.lista li{font-size:12.5px;}
+
+  .item-fila{display:flex; justify-content:space-between; align-items:center; width:100%; cursor:pointer;}
+  .item-detalle{
+    font-size:12px; color:var(--text-2); padding:8px 0 2px 0;
+    border-top:1px dashed var(--border); margin-top:6px; line-height:1.7;
+  }
+  .item-detalle b{color:var(--text);}
+
+  /* Productos configurables */
+  .producto-card{border:1.5px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; background:#fff;}
+  .producto-card .encabezado{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+  .producto-card .encabezado input[type=text]{font-size:15px; font-weight:700; border:none; background:none; padding:2px 0; color:var(--text); width:auto; flex:1;}
+  .extra-row{display:flex; gap:6px; align-items:center; margin-top:6px;}
+  .extra-row input[type=text]{flex:1.4;}
+  .extra-row input[type=number]{flex:0.8; text-align:right;}
+  .margen-badge{
+    display:inline-flex; gap:4px; align-items:baseline;
+    background:var(--verde-bg); color:var(--verde); border-radius:999px;
+    padding:4px 10px; font-size:11.5px; font-weight:700;
+  }
+  .margen-badge.neg{background:var(--rojo-bg); color:var(--rojo-neg);}
+
+  nav.tabs{
+    position:fixed; bottom:0; left:0; right:0;
+    background:#fff;
+    border-top:1px solid var(--border);
+    display:flex;
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    box-shadow:0 -4px 14px rgba(20,30,25,0.06);
+    z-index:50;
+  }
+  nav.tabs button{
+    flex:1;
+    background:none;
+    border:none;
+    padding:7px 1px;
     text-align:center;
+    color:var(--text-2);
+    font-size:9.5px;
+    font-weight:600;
+    font-family:inherit;
+  }
+  nav.tabs button .ico{display:block; font-size:17px; margin-bottom:1px;}
+  nav.tabs button.activo{color:var(--salsa);}
+  nav.tabs button.activo .ico{transform:scale(1.1);}
+
+  nav.sidebar{display:none;}
+
+  .vista{display:none;}
+  .vista.activa{display:block;}
+
+  .app-layout{display:flex; min-height:100vh;}
+  .app-content{flex:1; min-width:0;}
+
+  @media (max-width:520px){
+    .grid4{ grid-template-columns:1fr 1fr; }
+    .grid3{ grid-template-columns:1fr 1fr; }
   }
 
-  /* ---------------- MOBILE ---------------- */
-  nav.tabbar{display:none;}
-
-  @media (max-width: 768px){
-    aside.sidebar{display:none;}
-    main{margin-left:0; padding:14px 14px 90px; max-width:100%;}
-    header.topbar{background-position:right -40px center;}
-    nav.tabbar{
-      display:flex;
-      position:fixed;
-      bottom:0; left:0; right:0;
-      background:#fff;
-      border-top:1px solid var(--border);
-      padding:8px 0 max(8px, env(safe-area-inset-bottom));
-      z-index:10;
+  @media (min-width: 900px){
+    body{padding-bottom:0;}
+    header.top{display:none;}
+    nav.tabs{display:none;}
+    nav.sidebar{
+      display:flex; flex-direction:column;
+      width:var(--sidebar-w); flex-shrink:0;
+      background:var(--sidebar-bg); padding:20px 14px;
+      position:sticky; top:0; height:100vh;
     }
-    nav.tabbar a{
-      flex:1;
-      text-align:center;
-      text-decoration:none;
-      color:var(--muted);
-      font-size:0.68rem;
+    nav.sidebar .marca{display:flex; align-items:center; gap:10px; margin-bottom:28px; padding:4px 10px 16px;
+      border-bottom:1px solid rgba(255,255,255,0.08);}
+    nav.sidebar .marca .logo-emoji{font-size:20px;}
+    nav.sidebar .marca h1{font-size:15.5px; color:var(--sidebar-text-active); margin:0; font-weight:700;}
+    nav.sidebar button{
+      display:flex; align-items:center; gap:11px;
+      background:none; border:none; border-left:3px solid transparent; text-align:left;
+      padding:10px 11px; border-radius:6px;
+      font-size:13.5px; font-weight:600; color:var(--sidebar-text); margin-bottom:2px;
+      font-family:inherit;
     }
-    nav.tabbar a.active{color:var(--accent-dark); font-weight:700;}
-    nav.tabbar .ic{display:block; font-size:1.2rem;}
+    nav.sidebar button .ico{font-size:16px; opacity:0.9;}
+    nav.sidebar button:hover{background:var(--sidebar-bg-2); color:var(--sidebar-text-active);}
+    nav.sidebar button.activo{
+      background:var(--sidebar-bg-2); color:var(--sidebar-text-active);
+      border-left-color:var(--naranja);
+    }
+    main{max-width:1080px; padding:24px 30px 40px 30px;}
+    .banner{border-radius:10px; margin:22px 22px 0 22px; padding:20px 24px;}
+    .banner h2{font-size:22px;}
+    .grid2{grid-template-columns:1fr 1fr;}
+    .card{padding:20px 22px;}
   }
+
+  .chart-wrap{background:#fff; border-radius:8px; padding:10px 6px; margin-top:10px;}
+  .toast{
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+    background:var(--sidebar-bg); color:#fff; padding:9px 16px; border-radius:999px;
+    font-size:12.5px; opacity:0; transition:opacity 0.25s; pointer-events:none; z-index:100;
+  }
+  .toast.show{opacity:0.96;}
 </style>
 </head>
 <body>
 
-<aside class="sidebar">
-  <div class="brand"><span class="logo">🥪</span> Lonches<br/>Gemma</div>
-  <nav class="sidenav">
-    <a href="#" data-view="ventas" class="active"><span class="ic">💰</span>Ventas</a>
-    <a href="#" data-view="compras"><span class="ic">🛒</span>Compras</a>
-    <a href="#" data-view="ingredientes"><span class="ic">🥬</span>Ingredientes</a>
-    <a href="#" data-view="productos"><span class="ic">🍮</span>Productos</a>
-    <a href="#" data-view="resumen"><span class="ic">📊</span>Resumen</a>
+<div class="app-layout">
+
+  <nav class="sidebar">
+    <div class="marca"><span class="logo-emoji">🥪</span><h1>Lonches Gemma</h1></div>
+    <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
+    <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
+    <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingredientes</button>
+    <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Productos</button>
+    <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
   </nav>
-</aside>
 
-<main>
-  <header class="topbar">
-    <h1>Control diario del negocio</h1>
-    <div class="fecha" id="fechaHoy"></div>
-  </header>
+  <div class="app-content">
 
-  <!-- ===================== VENTAS ===================== -->
-  <section class="view active" id="view-ventas">
-    <div class="card">
-      <h2>Registrar venta</h2>
+    <header class="top">
+      <div class="marca"><span class="logo-emoji">🥪</span><h1>Lonches Gemma</h1></div>
+      <div class="admin"><div class="avatar">👤</div></div>
+    </header>
 
-      <div class="field">
-        <label for="v-producto">Producto</label>
-        <select id="v-producto">
-          <option value="Lonche|30">Lonche ($30)</option>
-          <option value="Chocoflan|35">Chocoflan ($35)</option>
-        </select>
-      </div>
+    <div class="banner">
+      <div class="eyebrow">Lonches Gemma</div>
+      <h2>Control diario del negocio</h2>
+      <p id="fechaHoy"></p>
+    </div>
 
-      <div class="row-2">
-        <div>
-          <label for="v-turno">Turno</label>
-          <select id="v-turno">
-            <option>Mañana</option>
-            <option>Tarde</option>
-          </select>
+    <main>
+
+      <!-- VENTAS -->
+      <section id="vista-ventas" class="vista activa">
+        <div class="card">
+          <h2>Registrar venta</h2>
+          <label>Producto</label>
+          <select id="v-producto"></select>
+          <div class="grid2">
+            <div>
+              <label>Turno</label>
+              <select id="v-turno">
+                <option value="Mañana">Mañana</option>
+                <option value="Tarde">Tarde</option>
+              </select>
+            </div>
+            <div>
+              <label>Cantidad</label>
+              <input type="number" id="v-cantidad" min="1" value="1">
+            </div>
+          </div>
+          <label>Fecha</label>
+          <input type="date" id="v-fecha">
+          <button class="btn" onclick="agregarVenta()">+ Agregar venta</button>
         </div>
-        <div>
-          <label for="v-cantidad">Cantidad</label>
-          <input id="v-cantidad" type="number" min="1" value="1" />
+
+        <div class="card">
+          <h2>Hoy</h2>
+          <div class="grid2">
+            <div class="stat"><div class="num" id="hoyPiezas">0</div><div class="lbl">Piezas hoy</div></div>
+            <div class="stat"><div class="num" id="hoyIngreso">$0</div><div class="lbl">Ingreso hoy</div></div>
+          </div>
         </div>
-      </div>
 
-      <div class="field">
-        <label for="v-fecha">Fecha</label>
-        <input id="v-fecha" type="date" />
-      </div>
-
-      <button class="primary" id="btnAgregarVenta">+ Agregar venta</button>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat-box">
-        <div class="stat-label">Hoy</div>
-        <div class="stat-value" id="hoyPiezas">0</div>
-        <div class="stat-sub">PIEZAS HOY</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Hoy</div>
-        <div class="stat-value" id="hoyIngreso">$0</div>
-        <div class="stat-sub">INGRESO HOY</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Historial de ventas por semana</h2>
-      <div class="hist-hint">Toca una semana para desplegarla</div>
-      <div id="ventasHistorial"><div class="empty-state">Aún no hay ventas registradas.</div></div>
-    </div>
-  </section>
-
-  <!-- ===================== COMPRAS ===================== -->
-  <section class="view" id="view-compras">
-    <div class="card">
-      <h2>Registrar compra / insumo</h2>
-
-      <div class="field">
-        <label for="c-insumo">Insumo</label>
-        <input id="c-insumo" type="text" placeholder="Ej. Carne de cerdo" />
-      </div>
-
-      <div class="row-2">
-        <div>
-          <label for="c-cantidad">Cantidad</label>
-          <input id="c-cantidad" type="number" step="any" placeholder="1" />
+        <div class="card">
+          <h2>Historial de ventas por semana</h2>
+          <p class="sub">Toca una semana para desplegarla</p>
+          <div id="listaSemanas"></div>
         </div>
-        <div>
-          <label for="c-unidad">Unidad</label>
-          <select id="c-unidad">
-            <option value="kg">kg</option>
-            <option value="g">g</option>
-            <option value="L">L</option>
-            <option value="pza">pza</option>
-          </select>
+      </section>
+
+      <!-- COMPRAS -->
+      <section id="vista-compras" class="vista">
+        <div class="card">
+          <h2>Registrar compra / insumo</h2>
+          <label>Insumo</label>
+          <input type="text" id="c-nombre" placeholder="Ej. Carne de cerdo">
+          <div class="grid3">
+            <div>
+              <label>Cantidad</label>
+              <input type="number" step="0.01" id="c-cantidad" placeholder="1">
+            </div>
+            <div>
+              <label>Unidad</label>
+              <select id="c-unidad">
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+                <option value="L">L</option>
+                <option value="pza">pza</option>
+              </select>
+            </div>
+            <div>
+              <label>Costo total ($)</label>
+              <input type="number" step="0.01" id="c-costo" placeholder="122">
+            </div>
+          </div>
+          <label>Fecha</label>
+          <input type="date" id="c-fecha">
+          <button class="btn" onclick="agregarCompra()">+ Agregar compra</button>
         </div>
-      </div>
 
-      <div class="field">
-        <label for="c-costo">Costo total ($)</label>
-        <input id="c-costo" type="number" step="any" placeholder="122" />
-      </div>
+        <div class="card">
+          <h2>Gasto total en compras</h2>
+          <div class="stat" style="width:100%"><div class="num" id="totalCompras">$0</div><div class="lbl">Acumulado</div></div>
+        </div>
 
-      <div class="field">
-        <label for="c-fecha">Fecha</label>
-        <input id="c-fecha" type="date" />
-      </div>
+        <div class="card">
+          <h2>Historial de compras por semana</h2>
+          <p class="sub">Toca un insumo para ver su desglose (cantidad, costo total y costo por unidad)</p>
+          <div id="listaCompras"></div>
+        </div>
+      </section>
 
-      <button class="primary" id="btnAgregarCompra">+ Agregar compra</button>
-    </div>
+      <!-- INGREDIENTES (costeo del lonche) -->
+      <section id="vista-ingredientes" class="vista">
+        <div class="card">
+          <h2>Ingredientes del lonche</h2>
+          <p class="sub">Actualiza el costo de cada ingrediente por pieza — el costeo se recalcula solo</p>
+          <div id="listaIngredientes"></div>
+          <button class="btn secundario chico" style="margin-top:12px;width:100%;" onclick="agregarIngrediente()">+ Agregar ingrediente</button>
+        </div>
 
-    <div class="stats-row">
-      <div class="stat-box" style="flex:1;">
-        <div class="stat-label">Acumulado</div>
-        <div class="stat-value" id="gastoTotal">$0.00</div>
-        <div class="stat-sub">GASTO TOTAL EN COMPRAS</div>
-      </div>
-    </div>
+        <div class="card">
+          <h2>Costeo del lonche</h2>
+          <div class="grid2">
+            <div>
+              <label>Precio de venta ($)</label>
+              <input type="number" step="0.01" id="ing-precio" value="30" oninput="renderIngredientes()">
+            </div>
+            <div>
+              <label>Mano de obra / pieza ($)</label>
+              <input type="number" step="0.01" id="ing-manoobra" value="2.30" oninput="renderIngredientes()">
+            </div>
+          </div>
+          <label>Costos fijos e indirectos / pieza ($) — luz, gas, transporte, etc. prorrateados</label>
+          <input type="number" step="0.01" id="ing-indirectos" value="1.90" oninput="renderIngredientes()">
 
-    <div class="card">
-      <h2>Historial de compras por semana</h2>
-      <div class="hist-hint">Toca un insumo para ver su desglose</div>
-      <div id="comprasHistorial"><div class="empty-state">Aún no hay compras registradas.</div></div>
-    </div>
-  </section>
+          <div class="grid2" style="margin-top:14px;">
+            <div class="stat"><div class="num" id="ing-costoInsumos">$0</div><div class="lbl">Costo insumos</div></div>
+            <div class="stat"><div class="num" id="ing-costoTotal">$0</div><div class="lbl">Costo total/pieza</div></div>
+            <div class="stat"><div class="num" id="ing-margenBruto">$0</div><div class="lbl">Margen bruto</div></div>
+            <div class="stat"><div class="num" id="ing-margenNeto">$0</div><div class="lbl">Margen neto</div></div>
+          </div>
+          <div class="grid2" style="margin-top:10px;">
+            <div class="stat"><div class="num" id="ing-pctBruto">0%</div><div class="lbl">% Margen bruto</div></div>
+            <div class="stat"><div class="num" id="ing-pctNeto">0%</div><div class="lbl">% Margen neto</div></div>
+          </div>
+        </div>
+      </section>
 
-  <!-- ===================== INGREDIENTES / PRODUCTOS / RESUMEN ===================== -->
-  <section class="view" id="view-ingredientes">
-    <div class="card">
-      <h2>Ingredientes</h2>
-      <div class="placeholder">No tengo el diseño original de esta pantalla — compárteme una captura o el código y la dejo igual que el resto.</div>
-    </div>
-  </section>
+      <!-- PRODUCTOS (chocoflan y otros) -->
+      <section id="vista-productos" class="vista">
+        <div class="card">
+          <h2>Otros productos</h2>
+          <p class="sub">Chocoflan y cualquier otro producto nuevo que decidas vender. Pon el costo y el precio de venta, y aquí se calculan los márgenes.</p>
+          <div id="listaProductos"></div>
+          <button class="btn secundario" onclick="agregarProducto()">+ Agregar producto nuevo</button>
+        </div>
+      </section>
 
-  <section class="view" id="view-productos">
-    <div class="card">
-      <h2>Productos</h2>
-      <div class="placeholder">No tengo el diseño original de esta pantalla — compárteme una captura o el código y la dejo igual que el resto.</div>
-    </div>
-  </section>
+      <!-- RESUMEN -->
+      <section id="vista-resumen" class="vista">
+        <div class="card">
+          <h2>Resumen general</h2>
+          <div class="grid2">
+            <div class="stat"><div class="num" id="r-piezas">0</div><div class="lbl">Piezas vendidas</div></div>
+            <div class="stat"><div class="num" id="r-ingresos">$0</div><div class="lbl">Ingresos totales</div></div>
+            <div class="stat"><div class="num" id="r-gastos">$0</div><div class="lbl">Gastos (compras)</div></div>
+            <div class="stat"><div class="num" id="r-ganancia">$0</div><div class="lbl">Ganancia neta</div></div>
+          </div>
+        </div>
 
-  <section class="view" id="view-resumen">
-    <div class="card">
-      <h2>Resumen</h2>
-      <div class="placeholder">No tengo el diseño original de esta pantalla — compárteme una captura o el código y la dejo igual que el resto.</div>
-    </div>
-  </section>
-</main>
+        <div class="card">
+          <h2>Ventas por día</h2>
+          <div class="chart-wrap"><canvas id="chartDias" height="180"></canvas></div>
+        </div>
 
-<nav class="tabbar">
-  <a href="#" data-view="ventas" class="active"><span class="ic">💰</span>Ventas</a>
-  <a href="#" data-view="compras"><span class="ic">🛒</span>Compras</a>
-  <a href="#" data-view="ingredientes"><span class="ic">🥬</span>Ingr.</a>
-  <a href="#" data-view="productos"><span class="ic">🍮</span>Prod.</a>
-  <a href="#" data-view="resumen"><span class="ic">📊</span>Resumen</a>
+        <div class="card">
+          <h2>Mañana vs. Tarde</h2>
+          <div class="chart-wrap"><canvas id="chartTurno" height="180"></canvas></div>
+        </div>
+
+        <div class="card">
+          <h2>Ventas por producto</h2>
+          <div class="chart-wrap"><canvas id="chartProducto" height="180"></canvas></div>
+        </div>
+
+        <div class="card">
+          <button class="btn secundario" onclick="borrarTodo()">Borrar todos los datos</button>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<nav class="tabs">
+  <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
+  <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
+  <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingr.</button>
+  <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Prod.</button>
+  <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
 </nav>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-/* ============================================================
-   CONFIGURACIÓN FIREBASE — pega aquí el config real de tu
-   proyecto "lonches-gemma" (Firebase console > Configuración
-   del proyecto > tus apps > SDK setup and configuration)
-   ============================================================ */
-const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "lonches-gemma.firebaseapp.com",
-  projectId: "lonches-gemma",
-  storageBucket: "lonches-gemma.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const ventasRef = db.collection("ventas");
-const comprasRef = db.collection("compras");
-
-// -------- fecha de hoy --------
-const hoy = new Date();
-document.getElementById("fechaHoy").textContent =
-  hoy.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
-document.getElementById("v-fecha").valueAsDate = hoy;
-document.getElementById("c-fecha").valueAsDate = hoy;
-const hoyISO = hoy.toISOString().slice(0, 10);
-
-// -------- navegación (sidebar + tabbar) --------
-function showView(name){
-  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + name));
-  document.querySelectorAll("nav.sidenav a, nav.tabbar a").forEach(a =>
-    a.classList.toggle("active", a.dataset.view === name)
-  );
-}
-document.querySelectorAll("nav.sidenav a, nav.tabbar a").forEach(a => {
-  a.addEventListener("click", (e) => {
-    e.preventDefault();
-    showView(a.dataset.view);
-  });
-});
-
-// -------- semana ISO + rango de fechas --------
-function getWeekInfo(fechaISO) {
-  const d = new Date(fechaISO + "T00:00:00");
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = (date.getUTCDay() + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - dayNum + 3);
-  const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
-  const weekNumber = 1 + Math.round(
-    ((date - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7
-  );
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const fmt = (x) => x.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-  return {
-    key: `${date.getUTCFullYear()}-W${String(weekNumber).padStart(2, "0")}`,
-    number: weekNumber,
-    range: `${fmt(monday)} - ${fmt(sunday)}, ${date.getUTCFullYear()}`
+  const firebaseConfig = {
+    apiKey: "AIzaSyCoe2So4sBEMTsza3UvRRW_-BH0XA0uGWE",
+    authDomain: "lonches-gemma.firebaseapp.com",
+    projectId: "lonches-gemma",
+    storageBucket: "lonches-gemma.firebasestorage.app",
+    messagingSenderId: "879803932056",
+    appId: "1:879803932056:web:1d703cc5c0b0cf55e41fed"
   };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+<script>
+/* ---------- Almacenamiento persistente (Firebase Firestore) ---------- */
+async function cargar(clave, porDefecto){
+  try{
+    const snap = await db.collection('lonches_gemma').doc(clave).get();
+    if(snap.exists) return snap.data().items;
+    return porDefecto;
+  }catch(e){ console.error('error al cargar', clave, e); return porDefecto; }
 }
-function groupByWeek(items, costField){
-  const groups = new Map();
-  for (const it of items) {
-    const { key, number, range } = getWeekInfo(it.fecha);
-    if (!groups.has(key)) groups.set(key, { key, number, range, items: [], total: 0, piezas: 0 });
-    const g = groups.get(key);
-    g.items.push(it);
-    g.total += Number(it[costField] || 0);
-    g.piezas += Number(it.cantidad || 0);
-  }
-  return Array.from(groups.values()).sort((a, b) => (a.key < b.key ? 1 : -1));
+async function guardar(clave, valor){
+  try{
+    await db.collection('lonches_gemma').doc(clave).set({items: valor, actualizado: new Date().toISOString()});
+  }catch(e){ console.error('error al guardar', clave, e); }
 }
 
-// =====================================================================
-// VENTAS
-// =====================================================================
-document.getElementById("btnAgregarVenta").addEventListener("click", () => {
-  const [producto, precio] = document.getElementById("v-producto").value.split("|");
-  const turno = document.getElementById("v-turno").value;
-  const cantidad = parseInt(document.getElementById("v-cantidad").value, 10);
-  const fecha = document.getElementById("v-fecha").value;
-  if (!cantidad || !fecha) { alert("Completa cantidad y fecha."); return; }
+let ventas = [];
+let compras = [];
+let ingredientes = [];
+let productos = [];
+let semanasAbiertas = new Set();
+let semanasComprasAbiertas = new Set();
+let detalleComprasAbiertos = new Set();
 
-  ventasRef.add({
-    producto, precio: Number(precio), turno, cantidad, fecha,
-    total: Number(precio) * cantidad
-  });
-});
+/* ---------- Datos semilla (solo si no hay nada guardado) ---------- */
+const VENTAS_SEMILLA = [
+  {fecha:'2026-08-11', turno:'Tarde', producto:'Lonche', cantidad:11, precio:30},
+  {fecha:'2026-08-12', turno:'Mañana', producto:'Lonche', cantidad:3, precio:30},
+  {fecha:'2026-08-12', turno:'Tarde', producto:'Lonche', cantidad:5, precio:30},
+  {fecha:'2026-08-13', turno:'Mañana', producto:'Lonche', cantidad:6, precio:30},
+  {fecha:'2026-08-13', turno:'Tarde', producto:'Lonche', cantidad:9, precio:30},
+  {fecha:'2026-08-13', turno:'Tarde', producto:'Chocoflan', cantidad:7, precio:35},
+  {fecha:'2026-08-14', turno:'Mañana', producto:'Lonche', cantidad:7, precio:30},
+  {fecha:'2026-08-14', turno:'Mañana', producto:'Chocoflan', cantidad:3, precio:35},
+  {fecha:'2026-08-14', turno:'Tarde', producto:'Lonche', cantidad:4, precio:30},
+  {fecha:'2026-08-14', turno:'Tarde', producto:'Chocoflan', cantidad:1, precio:35},
+];
 
-ventasRef.orderBy("fecha", "desc").onSnapshot(snapshot => {
-  const ventas = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+const INGREDIENTES_SEMILLA = [
+  {nombre:'Birote (pieza $8, rinde 2 tiras)', costo:4},
+  {nombre:'Carne de cerdo (~83g)', costo:10},
+  {nombre:'Jitomate (~83g)', costo:1.70},
+  {nombre:'Puré de tomate (~83g)', costo:1.35},
+  {nombre:'Crema', costo:1},
+  {nombre:'Mayonesa', costo:2},
+  {nombre:'Mostaza', costo:0.10},
+  {nombre:'Cebolla', costo:0.20},
+  {nombre:'Ajo', costo:0.10},
+  {nombre:'Laurel', costo:0.04},
+  {nombre:'Pimienta', costo:0.0083},
+  {nombre:'Clavo', costo:0.0083},
+  {nombre:'Sal', costo:0.025},
+];
 
-  const deHoy = ventas.filter(v => v.fecha === hoyISO);
-  document.getElementById("hoyPiezas").textContent =
-    deHoy.reduce((s, v) => s + Number(v.cantidad || 0), 0);
-  document.getElementById("hoyIngreso").textContent =
-    "$" + deHoy.reduce((s, v) => s + Number(v.total || 0), 0).toFixed(0);
-
-  const cont = document.getElementById("ventasHistorial");
-  if (!ventas.length) {
-    cont.innerHTML = '<div class="empty-state">Aún no hay ventas registradas.</div>';
-    return;
+const PRODUCTOS_SEMILLA = [
+  {
+    id:'chocoflan',
+    nombre:'Chocoflan',
+    costoLote:210,
+    piezasLote:12,
+    precioVenta:35,
+    extras:[
+      {nombre:'Charolita', costo:2.90},
+      {nombre:'Cucharita', costo:0.30}
+    ]
   }
-  const weeks = groupByWeek(ventas, "total");
-  cont.innerHTML = weeks.map(w => `
-    <div class="week-block" data-week="${w.key}">
-      <div class="week-row">
-        <div>
-          <div class="week-title">Semana ${w.number}</div>
-          <div class="week-dates">${w.range}</div>
+];
+
+function hoyISO(){ return new Date().toISOString().slice(0,10); }
+
+function fmtFecha(iso){
+  const [y,m,d] = iso.split('-');
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${parseInt(d)} ${meses[parseInt(m)-1]}`;
+}
+
+/* ISO week number + rango de fechas de esa semana */
+function semanaISO(iso){
+  const d = new Date(iso+'T00:00:00');
+  const dTmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (dTmp.getUTCDay() + 6) % 7;
+  dTmp.setUTCDate(dTmp.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(dTmp.getUTCFullYear(),0,4));
+  const week = 1 + Math.round(((dTmp - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay()+6)%7)) / 7);
+  return {anio:dTmp.getUTCFullYear(), semana:week};
+}
+function lunesDeSemana(iso){
+  const d = new Date(iso+'T00:00:00');
+  const day = (d.getDay()+6)%7;
+  d.setDate(d.getDate()-day);
+  return d;
+}
+function viernesDeSemana(iso){
+  const l = lunesDeSemana(iso);
+  const v = new Date(l); v.setDate(v.getDate()+4);
+  return v;
+}
+function fmtRango(lun,vie){
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${lun.getDate()} - ${vie.getDate()} ${meses[vie.getMonth()]}`;
+}
+
+/* ---------- Inicio ---------- */
+async function init(){
+  document.getElementById('v-fecha').value = hoyISO();
+  document.getElementById('c-fecha').value = hoyISO();
+  document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long', day:'numeric', month:'long'});
+
+  ventas = await cargar('ventas', null);
+  if(ventas === null){
+    ventas = VENTAS_SEMILLA;
+    await guardar('ventas', ventas);
+  } else {
+    // Migración: registros antiguos guardados como "Torta" pasan a "Lonche"
+    let migrado = false;
+    ventas = ventas.map(v=>{
+      if(v.producto === 'Torta'){ migrado = true; return {...v, producto:'Lonche'}; }
+      return v;
+    });
+    if(migrado) await guardar('ventas', ventas);
+  }
+
+  compras = await cargar('compras', []);
+
+  ingredientes = await cargar('ingredientes', null);
+  if(ingredientes === null){ ingredientes = INGREDIENTES_SEMILLA; await guardar('ingredientes', ingredientes); }
+
+  productos = await cargar('productos', null);
+  if(productos === null){ productos = PRODUCTOS_SEMILLA; await guardar('productos', productos); }
+
+  // abrir la semana mas reciente por default (ventas y compras)
+  if(ventas.length){
+    const masReciente = ventas.map(v=>v.fecha).sort().reverse()[0];
+    const {anio,semana} = semanaISO(masReciente);
+    semanasAbiertas.add(anio+'-'+semana);
+  }
+  if(compras.length){
+    const masRecienteCompra = compras.map(c=>c.fecha).sort().reverse()[0];
+    const {anio,semana} = semanaISO(masRecienteCompra);
+    semanasComprasAbiertas.add(anio+'-'+semana);
+  }
+
+  poblarSelectProductoVenta();
+  renderIngredientes();
+  renderProductos();
+  renderTodo();
+}
+
+function poblarSelectProductoVenta(){
+  const sel = document.getElementById('v-producto');
+  const opciones = [{nombre:'Lonche', precio: parseFloat(document.getElementById('ing-precio')?.value || 30)}]
+    .concat(productos.map(p=>({nombre:p.nombre, precio:p.precioVenta})));
+  sel.innerHTML = opciones.map(o=>`<option value="${o.nombre}" data-precio="${o.precio}">${o.nombre} ($${o.precio})</option>`).join('');
+}
+
+/* ---------- Navegación ---------- */
+function cambiarVista(v){
+  document.querySelectorAll('.vista').forEach(s=>s.classList.remove('activa'));
+  document.getElementById('vista-'+v).classList.add('activa');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('activo'));
+  document.querySelectorAll(`.tab-btn[data-vista="${v}"]`).forEach(b=>b.classList.add('activo'));
+  if(v==='resumen') dibujarGraficos();
+  if(v==='ventas') poblarSelectProductoVenta();
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+/* ---------- Ventas ---------- */
+async function agregarVenta(){
+  const sel = document.getElementById('v-producto');
+  const producto = sel.value;
+  const precio = parseFloat(sel.selectedOptions[0].dataset.precio) || 0;
+  const turno = document.getElementById('v-turno').value;
+  const cantidad = parseInt(document.getElementById('v-cantidad').value) || 0;
+  const fecha = document.getElementById('v-fecha').value || hoyISO();
+  if(cantidad <= 0){ toast('Pon una cantidad válida'); return; }
+
+  ventas.push({fecha, turno, producto, cantidad, precio});
+  await guardar('ventas', ventas);
+  document.getElementById('v-cantidad').value = 1;
+
+  const {anio,semana} = semanaISO(fecha);
+  semanasAbiertas.add(anio+'-'+semana);
+
+  toast('Venta agregada ✓');
+  renderTodo();
+}
+
+async function borrarVenta(i){
+  ventas.splice(i,1);
+  await guardar('ventas', ventas);
+  renderTodo();
+}
+
+function toggleSemana(clave){
+  if(semanasAbiertas.has(clave)) semanasAbiertas.delete(clave);
+  else semanasAbiertas.add(clave);
+  renderVentas();
+}
+
+function renderVentas(){
+  const cont = document.getElementById('listaSemanas');
+  if(ventas.length===0){ cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>'; }
+  else{
+    const grupos = {};
+    ventas.forEach((v,i)=>{
+      const {anio,semana} = semanaISO(v.fecha);
+      const clave = anio+'-'+semana;
+      if(!grupos[clave]) grupos[clave] = {anio, semana, items:[], lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha)};
+      grupos[clave].items.push({...v, i});
+    });
+    const claves = Object.keys(grupos).sort().reverse();
+    cont.innerHTML = claves.map(clave=>{
+      const g = grupos[clave];
+      const piezas = g.items.reduce((s,v)=>s+v.cantidad,0);
+      const ingreso = g.items.reduce((s,v)=>s+v.cantidad*v.precio,0);
+      const abierta = semanasAbiertas.has(clave);
+      const itemsOrdenados = g.items.slice().sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+      return `
+        <div class="semana ${abierta?'abierta':''}">
+          <div class="semana-header" onclick="toggleSemana('${clave}')">
+            <div class="titulo">Semana ${g.semana}
+              <small>${fmtRango(g.lun,g.vie)} · ${g.anio}</small>
+            </div>
+            <div class="resumen-mini">
+              <span class="pill">${piezas} pzas</span>
+              <span class="pill">$${ingreso.toLocaleString()}</span>
+              <span class="chevron">▶</span>
+            </div>
+          </div>
+          <div class="semana-body">
+            <ul class="lista">
+              ${itemsOrdenados.map(v=>`
+                <li>
+                  <div class="izq">
+                    <b>${v.producto} x${v.cantidad}</b>
+                    <span>${fmtFecha(v.fecha)} · ${v.turno}</span>
+                  </div>
+                  <div class="der">
+                    <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
+                    <button class="del" onclick="borrarVenta(${v.i})">✕</button>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
         </div>
-        <div class="week-meta">
-          <span>${w.piezas} pzas</span>
-          <span>$${w.total.toFixed(0)}</span>
-          <span class="chev">▾</span>
+      `;
+    }).join('');
+  }
+
+  const hoy = hoyISO();
+  const deHoy = ventas.filter(v=>v.fecha===hoy);
+  document.getElementById('hoyPiezas').textContent = deHoy.reduce((s,v)=>s+v.cantidad,0);
+  document.getElementById('hoyIngreso').textContent = '$'+deHoy.reduce((s,v)=>s+v.cantidad*v.precio,0).toLocaleString();
+}
+
+/* ---------- Compras ---------- */
+async function agregarCompra(){
+  const nombre = document.getElementById('c-nombre').value.trim();
+  const cantidad = parseFloat(document.getElementById('c-cantidad').value) || 0;
+  const unidad = document.getElementById('c-unidad').value;
+  const costo = parseFloat(document.getElementById('c-costo').value) || 0;
+  const fecha = document.getElementById('c-fecha').value || hoyISO();
+  if(!nombre || costo<=0){ toast('Completa insumo y costo'); return; }
+
+  compras.push({nombre, cantidad, unidad, costo, fecha});
+  await guardar('compras', compras);
+  document.getElementById('c-nombre').value = '';
+  document.getElementById('c-cantidad').value = '';
+  document.getElementById('c-costo').value = '';
+
+  const {anio,semana} = semanaISO(fecha);
+  semanasComprasAbiertas.add(anio+'-'+semana);
+
+  toast('Compra agregada ✓');
+  renderTodo();
+}
+
+async function borrarCompra(i){
+  compras.splice(i,1);
+  await guardar('compras', compras);
+  renderTodo();
+}
+
+function toggleSemanaCompra(clave){
+  if(semanasComprasAbiertas.has(clave)) semanasComprasAbiertas.delete(clave);
+  else semanasComprasAbiertas.add(clave);
+  renderCompras();
+}
+
+function toggleDetalleCompra(i){
+  if(detalleComprasAbiertos.has(i)) detalleComprasAbiertos.delete(i);
+  else detalleComprasAbiertos.add(i);
+  renderCompras();
+}
+
+function renderCompras(){
+  const cont = document.getElementById('listaCompras');
+  if(compras.length===0){
+    cont.innerHTML = '<p class="vacio">Sin compras registradas todavía</p>';
+  } else {
+    const grupos = {};
+    compras.forEach((c,i)=>{
+      const {anio,semana} = semanaISO(c.fecha);
+      const clave = anio+'-'+semana;
+      if(!grupos[clave]) grupos[clave] = {anio, semana, items:[], lun:lunesDeSemana(c.fecha), vie:viernesDeSemana(c.fecha), total:0};
+      grupos[clave].items.push({...c, i});
+      grupos[clave].total += c.costo;
+    });
+    const claves = Object.keys(grupos).sort().reverse();
+    cont.innerHTML = claves.map(clave=>{
+      const g = grupos[clave];
+      const abierta = semanasComprasAbiertas.has(clave);
+      const itemsOrdenados = g.items.slice().sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+      return `
+        <div class="semana ${abierta?'abierta':''}">
+          <div class="semana-header" onclick="toggleSemanaCompra('${clave}')">
+            <div class="titulo">Semana ${g.semana}
+              <small>${fmtRango(g.lun,g.vie)} · ${g.anio}</small>
+            </div>
+            <div class="resumen-mini">
+              <span class="pill">$${g.total.toLocaleString()}</span>
+              <span class="chevron">▶</span>
+            </div>
+          </div>
+          <div class="semana-body">
+            <ul class="lista">
+              ${itemsOrdenados.map(c=>{
+                const detalleAbierto = detalleComprasAbiertos.has(c.i);
+                const costoUnidad = c.cantidad ? (c.costo / c.cantidad) : null;
+                return `
+                <li>
+                  <div style="width:100%">
+                    <div class="item-fila" onclick="toggleDetalleCompra(${c.i})">
+                      <div class="izq">
+                        <b>${c.nombre}</b>
+                        <span>${fmtFecha(c.fecha)}</span>
+                      </div>
+                      <div class="der">
+                        <span class="pill">$${c.costo.toLocaleString()}</span>
+                        <button class="del" onclick="event.stopPropagation(); borrarCompra(${c.i})">✕</button>
+                      </div>
+                    </div>
+                    ${detalleAbierto ? `
+                      <div class="item-detalle">
+                        Cantidad comprada: <b>${c.cantidad || 0} ${c.unidad||''}</b><br>
+                        Costo total: <b>$${c.costo.toLocaleString()}</b><br>
+                        Costo por ${c.unidad||'unidad'}: <b>${costoUnidad!==null ? '$'+costoUnidad.toFixed(2)+' / '+(c.unidad||'unidad') : 'N/D'}</b>
+                      </div>
+                    ` : ''}
+                  </div>
+                </li>
+              `}).join('')}
+            </ul>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  document.getElementById('totalCompras').textContent = '$'+compras.reduce((s,c)=>s+c.costo,0).toLocaleString();
+}
+
+/* ---------- Ingredientes / costeo del lonche ---------- */
+async function agregarIngrediente(){
+  ingredientes.push({nombre:'Nuevo ingrediente', costo:0});
+  await guardar('ingredientes', ingredientes);
+  renderIngredientes();
+}
+async function actualizarIngrediente(i, campo, valor){
+  if(campo==='costo') ingredientes[i].costo = parseFloat(valor)||0;
+  else ingredientes[i].nombre = valor;
+  await guardar('ingredientes', ingredientes);
+  renderTotalesIngredientes();
+}
+async function borrarIngrediente(i){
+  ingredientes.splice(i,1);
+  await guardar('ingredientes', ingredientes);
+  renderIngredientes();
+}
+
+function renderIngredientes(){
+  const cont = document.getElementById('listaIngredientes');
+  cont.innerHTML = ingredientes.map((ing,i)=>`
+    <div class="receta-item">
+      <input type="text" value="${ing.nombre}" onchange="actualizarIngrediente(${i},'nombre',this.value)">
+      <span>$</span>
+      <input type="number" step="0.01" value="${ing.costo}" onchange="actualizarIngrediente(${i},'costo',this.value)">
+      <button class="del" onclick="borrarIngrediente(${i})">✕</button>
+    </div>
+  `).join('');
+  renderTotalesIngredientes();
+  poblarSelectProductoVenta();
+}
+
+function renderTotalesIngredientes(){
+  const costoInsumos = ingredientes.reduce((s,ing)=>s+(ing.costo||0),0);
+  const precio = parseFloat(document.getElementById('ing-precio').value)||0;
+  const manoObra = parseFloat(document.getElementById('ing-manoobra').value)||0;
+  const indirectos = parseFloat(document.getElementById('ing-indirectos').value)||0;
+  const costoTotal = costoInsumos + manoObra + indirectos;
+  const margenBruto = precio - costoInsumos;
+  const margenNeto = precio - costoTotal;
+  const pctBruto = precio>0 ? (margenBruto/precio*100) : 0;
+  const pctNeto = precio>0 ? (margenNeto/precio*100) : 0;
+
+  document.getElementById('ing-costoInsumos').textContent = '$'+costoInsumos.toFixed(2);
+  document.getElementById('ing-costoTotal').textContent = '$'+costoTotal.toFixed(2);
+  const elB = document.getElementById('ing-margenBruto');
+  const elN = document.getElementById('ing-margenNeto');
+  elB.textContent = '$'+margenBruto.toFixed(2);
+  elB.className = 'num ' + (margenBruto>=0?'pos':'neg');
+  elN.textContent = '$'+margenNeto.toFixed(2);
+  elN.className = 'num ' + (margenNeto>=0?'pos':'neg');
+  document.getElementById('ing-pctBruto').textContent = pctBruto.toFixed(1)+'%';
+  document.getElementById('ing-pctNeto').textContent = pctNeto.toFixed(1)+'%';
+}
+
+/* ---------- Productos (chocoflan y nuevos) ---------- */
+async function agregarProducto(){
+  const nombre = prompt('Nombre del nuevo producto:');
+  if(!nombre) return;
+  productos.push({
+    id: 'prod_'+Date.now(),
+    nombre,
+    costoLote: 0,
+    piezasLote: 1,
+    precioVenta: 0,
+    extras: []
+  });
+  await guardar('productos', productos);
+  renderProductos();
+}
+async function actualizarProducto(idx, campo, valor){
+  if(campo==='nombre') productos[idx].nombre = valor;
+  else productos[idx][campo] = parseFloat(valor)||0;
+  await guardar('productos', productos);
+  renderProductos(idx);
+}
+async function borrarProducto(idx){
+  productos.splice(idx,1);
+  await guardar('productos', productos);
+  renderProductos();
+}
+async function agregarExtra(idx){
+  productos[idx].extras.push({nombre:'Empaque', costo:0});
+  await guardar('productos', productos);
+  renderProductos();
+}
+async function actualizarExtra(idx, exIdx, campo, valor){
+  if(campo==='costo') productos[idx].extras[exIdx].costo = parseFloat(valor)||0;
+  else productos[idx].extras[exIdx].nombre = valor;
+  await guardar('productos', productos);
+  renderProductos(idx);
+}
+async function borrarExtra(idx, exIdx){
+  productos[idx].extras.splice(exIdx,1);
+  await guardar('productos', productos);
+  renderProductos();
+}
+
+function renderProductos(){
+  const cont = document.getElementById('listaProductos');
+  if(productos.length===0){ cont.innerHTML = '<p class="vacio">Sin productos adicionales todavía</p>'; poblarSelectProductoVenta(); return; }
+
+  cont.innerHTML = productos.map((p,idx)=>{
+    const costoBase = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
+    const costoExtras = p.extras.reduce((s,e)=>s+(e.costo||0),0);
+    const costoTotal = costoBase + costoExtras;
+    const margenBruto = p.precioVenta - costoBase;
+    const margenNeto = p.precioVenta - costoTotal;
+    const pctBruto = p.precioVenta>0 ? (margenBruto/p.precioVenta*100) : 0;
+    const pctNeto = p.precioVenta>0 ? (margenNeto/p.precioVenta*100) : 0;
+
+    return `
+    <div class="producto-card">
+      <div class="encabezado">
+        <input type="text" value="${p.nombre}" onchange="actualizarProducto(${idx},'nombre',this.value)">
+        <button class="del" onclick="borrarProducto(${idx})">✕</button>
+      </div>
+
+      <div class="grid3">
+        <div>
+          <label>Costo del lote ($)</label>
+          <input type="number" step="0.01" value="${p.costoLote}" onchange="actualizarProducto(${idx},'costoLote',this.value)">
+        </div>
+        <div>
+          <label>Piezas por lote</label>
+          <input type="number" step="1" value="${p.piezasLote}" onchange="actualizarProducto(${idx},'piezasLote',this.value)">
+        </div>
+        <div>
+          <label>Precio de venta ($/pza)</label>
+          <input type="number" step="0.01" value="${p.precioVenta}" onchange="actualizarProducto(${idx},'precioVenta',this.value)">
         </div>
       </div>
-      <div class="week-items">
-        ${w.items.map(v => `
-          <div class="item-row" data-id="${v.id}">
-            <div>
-              <div class="item-name">${v.producto} x${v.cantidad}</div>
-              <div class="item-sub">${new Date(v.fecha + "T00:00:00").toLocaleDateString("es-MX", {day:"numeric", month:"short"})} · ${v.turno}</div>
-            </div>
-            <div class="item-right">
-              <span class="item-chip">$${Number(v.total).toFixed(0)}</span>
-              <button class="del" data-del="${v.id}" data-col="ventas">✕</button>
-            </div>
-          </div>
-          <div class="item-detail">
-            Producto: <strong>${v.producto}</strong><br/>
-            Cantidad: <strong>${v.cantidad}</strong><br/>
-            Precio unitario: <strong>$${Number(v.precio).toFixed(2)}</strong><br/>
-            Turno: <strong>${v.turno}</strong>
-          </div>
-        `).join("")}
+
+      <h3>Empaque / extras por pieza</h3>
+      ${p.extras.map((ex,exIdx)=>`
+        <div class="extra-row">
+          <input type="text" value="${ex.nombre}" onchange="actualizarExtra(${idx},${exIdx},'nombre',this.value)">
+          <span>$</span>
+          <input type="number" step="0.01" value="${ex.costo}" onchange="actualizarExtra(${idx},${exIdx},'costo',this.value)">
+          <button class="del" onclick="borrarExtra(${idx},${exIdx})">✕</button>
+        </div>
+      `).join('')}
+      <button class="btn secundario chico" style="margin-top:8px;" onclick="agregarExtra(${idx})">+ extra</button>
+
+      <div class="grid2" style="margin-top:14px;">
+        <div class="stat"><div class="num">$${costoBase.toFixed(2)}</div><div class="lbl">Costo base/pza</div></div>
+        <div class="stat"><div class="num">$${costoTotal.toFixed(2)}</div><div class="lbl">Costo total/pza</div></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <span class="margen-badge ${margenBruto<0?'neg':''}">Margen bruto $${margenBruto.toFixed(2)} · ${pctBruto.toFixed(1)}%</span>
+        <span class="margen-badge ${margenNeto<0?'neg':''}">Margen neto $${margenNeto.toFixed(2)} · ${pctNeto.toFixed(1)}%</span>
       </div>
     </div>
-  `).join("");
+    `;
+  }).join('');
 
-  wireInteractions(cont);
-});
+  poblarSelectProductoVenta();
+}
 
-// =====================================================================
-// COMPRAS
-// =====================================================================
-document.getElementById("btnAgregarCompra").addEventListener("click", () => {
-  const insumo = document.getElementById("c-insumo").value.trim();
-  const cantidad = parseFloat(document.getElementById("c-cantidad").value);
-  const unidad = document.getElementById("c-unidad").value;
-  const costo = parseFloat(document.getElementById("c-costo").value);
-  const fecha = document.getElementById("c-fecha").value;
-  if (!insumo || !cantidad || !costo || !fecha) { alert("Completa insumo, cantidad, costo y fecha."); return; }
+/* ---------- Resumen ---------- */
+function renderResumen(){
+  const piezas = ventas.reduce((s,v)=>s+v.cantidad,0);
+  const ingresos = ventas.reduce((s,v)=>s+v.cantidad*v.precio,0);
+  const gastos = compras.reduce((s,c)=>s+c.costo,0);
+  document.getElementById('r-piezas').textContent = piezas;
+  document.getElementById('r-ingresos').textContent = '$'+ingresos.toLocaleString();
+  document.getElementById('r-gastos').textContent = '$'+gastos.toLocaleString();
+  document.getElementById('r-ganancia').textContent = '$'+(ingresos-gastos).toLocaleString();
+}
 
-  comprasRef.add({ insumo, cantidad, unidad, costo, fecha }).then(() => {
-    document.getElementById("c-insumo").value = "";
-    document.getElementById("c-cantidad").value = "";
-    document.getElementById("c-costo").value = "";
+let charts = {};
+function dibujarGraficos(){
+  const porDia = {};
+  const porTurno = {'Mañana':0,'Tarde':0};
+  const porProducto = {};
+  ventas.forEach(v=>{
+    porDia[v.fecha] = (porDia[v.fecha]||0) + v.cantidad;
+    porTurno[v.turno] = (porTurno[v.turno]||0) + v.cantidad;
+    porProducto[v.producto] = (porProducto[v.producto]||0) + v.cantidad;
   });
-});
+  const diasOrdenados = Object.keys(porDia).sort();
 
-comprasRef.orderBy("fecha", "desc").onSnapshot(snapshot => {
-  const compras = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-  document.getElementById("gastoTotal").textContent =
-    "$" + compras.reduce((s, c) => s + Number(c.costo || 0), 0).toFixed(2);
+  const paleta = { salsa:'#C6362A', naranja:'#E8923A', naranjaClaro:'#F2A459', menta:'#7BAF97', cafe:'#1F4A42' };
 
-  const cont = document.getElementById("comprasHistorial");
-  if (!compras.length) {
-    cont.innerHTML = '<div class="empty-state">Aún no hay compras registradas.</div>';
-    return;
-  }
-  const weeks = groupByWeek(compras, "costo");
-  cont.innerHTML = weeks.map(w => `
-    <div class="week-block" data-week="${w.key}">
-      <div class="week-row">
-        <div>
-          <div class="week-title">Semana ${w.number}</div>
-          <div class="week-dates">${w.range}</div>
-        </div>
-        <div class="week-meta">
-          <span>$${w.total.toFixed(2)}</span>
-          <span class="chev">▾</span>
-        </div>
-      </div>
-      <div class="week-items">
-        ${w.items.map(c => `
-          <div class="item-row" data-id="${c.id}">
-            <div>
-              <div class="item-name">${c.insumo}</div>
-              <div class="item-sub">${new Date(c.fecha + "T00:00:00").toLocaleDateString("es-MX", {day:"numeric", month:"short"})}</div>
-            </div>
-            <div class="item-right">
-              <span class="item-chip">$${Number(c.costo).toFixed(2)}</span>
-              <button class="del" data-del="${c.id}" data-col="compras">✕</button>
-            </div>
-          </div>
-          <div class="item-detail">
-            Cantidad comprada: <strong>${c.cantidad} ${c.unidad}</strong><br/>
-            Costo total: <strong>$${Number(c.costo).toFixed(2)}</strong><br/>
-            Costo por ${c.unidad}: <strong>${c.cantidad ? "$" + (c.costo / c.cantidad).toFixed(2) + " / " + c.unidad : "N/D"}</strong>
-          </div>
-        `).join("")}
-      </div>
-    </div>
-  `).join("");
-
-  wireInteractions(cont);
-});
-
-// -------- interacciones compartidas: abrir semana, abrir renglón, borrar --------
-function wireInteractions(container){
-  container.querySelectorAll(".week-row").forEach(row => {
-    row.addEventListener("click", () => row.closest(".week-block").classList.toggle("open"));
+  if(charts.dias) charts.dias.destroy();
+  charts.dias = new Chart(document.getElementById('chartDias'), {
+    type:'bar',
+    data:{ labels:diasOrdenados.map(fmtFecha), datasets:[{ data:diasOrdenados.map(d=>porDia[d]), backgroundColor:paleta.salsa, borderRadius:6 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:5}} } }
   });
-  container.querySelectorAll(".item-row").forEach(row => {
-    row.addEventListener("click", (e) => {
-      if (e.target.closest(".del")) return;
-      row.classList.toggle("open");
-    });
+
+  if(charts.turno) charts.turno.destroy();
+  charts.turno = new Chart(document.getElementById('chartTurno'), {
+    type:'doughnut',
+    data:{ labels:Object.keys(porTurno), datasets:[{ data:Object.values(porTurno), backgroundColor:[paleta.naranjaClaro, paleta.salsa] }] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
   });
-  container.querySelectorAll(".del").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const col = btn.dataset.col === "ventas" ? ventasRef : comprasRef;
-      col.doc(btn.dataset.del).delete();
-    });
+
+  if(charts.producto) charts.producto.destroy();
+  const coloresProd = [paleta.salsa, paleta.naranja, paleta.menta, paleta.cafe, paleta.naranjaClaro];
+  charts.producto = new Chart(document.getElementById('chartProducto'), {
+    type:'doughnut',
+    data:{ labels:Object.keys(porProducto), datasets:[{ data:Object.values(porProducto), backgroundColor:coloresProd }] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
   });
 }
+
+function renderTodo(){
+  renderVentas();
+  renderCompras();
+  renderResumen();
+}
+
+async function borrarTodo(){
+  if(!confirm('¿Seguro que quieres borrar todos los datos guardados? Esta acción no se puede deshacer.')) return;
+  ventas = [];
+  compras = [];
+  await guardar('ventas', ventas);
+  await guardar('compras', compras);
+  renderTodo();
+  dibujarGraficos();
+  toast('Datos borrados');
+}
+
+init();
 </script>
 </body>
 </html>
