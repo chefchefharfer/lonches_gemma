@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Tortas Gemma</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --salsa: #C6362A;      /* jitomate crudo, botones */
+    --salsa-2: #A82B21;
+    --naranja: #E8923A;    /* banner */
+    --naranja-2: #F2A459;
+    --menta: #C7E3D3;      /* sidebar / header */
+    --menta-2: #B4D9C4;
+    --crema: #F4EEDD;      /* fondo general */
+    --crema-card: #FDF7E9; /* tarjetas */
+    --cafe: #1F4A42;       /* texto principal (verde-teal oscuro) */
+    --cafe-suave: #5C7C72;
+    --verde: #4C7A3D;
+    --linea: #DCE9DE;
+    --sombra: 0 2px 10px rgba(31,74,66,0.08);
+    --radio: 16px;
+    --sidebar-w: 220px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--crema);
+    color:var(--cafe);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:84px;
+    min-height:100vh;
+  }
+  h1,h2,h3{
+    font-family:Georgia,"Iowan Old Style","Palatino Linotype",serif;
+    font-weight:700;
+    margin:0 0 4px 0;
+    letter-spacing:-0.01em;
+  }
+  header.top{
+    background:var(--menta);
+    color:var(--cafe);
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  header.top .marca{display:flex; align-items:center; gap:10px;}
+  header.top .marca .logo-emoji{font-size:24px;}
+  header.top h1{font-size:19px; color:var(--cafe); margin:0;}
+  header.top .admin{
+    display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600;
+  }
+  header.top .admin .avatar{
+    width:30px; height:30px; border-radius:50%;
+    background:var(--naranja-2); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:14px;
+  }
+
+  .banner{
+    background:linear-gradient(135deg,var(--naranja) 0%, var(--naranja-2) 100%);
+    color:#fff;
+    padding:20px 18px 24px 18px;
+    text-align:center;
+  }
+  .banner h2{font-size:20px; color:#fff; margin:0;}
+  .banner p{margin:4px 0 0 0; font-size:12.5px; opacity:0.95; font-family:-apple-system,sans-serif; font-weight:500;}
+
+  main{padding:16px;}
+  .card{
+    background:var(--crema-card);
+    border:1px solid var(--linea);
+    border-radius:var(--radio);
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:var(--sombra);
+  }
+  .card h2{font-size:17px; color:var(--cafe);}
+  .card h3{font-size:14px; color:var(--cafe-suave); margin-top:14px;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .stat{
+    background:var(--menta);
+    border-radius:12px;
+    padding:12px;
+    text-align:center;
+  }
+  .stat .num{font-size:22px; font-weight:800; color:var(--salsa-2); font-family:Georgia,serif;}
+  .stat .lbl{font-size:11px; color:var(--cafe-suave); text-transform:uppercase; letter-spacing:0.04em;}
+
+  label{
+    display:block;
+    font-size:12px;
+    color:var(--cafe-suave);
+    margin:10px 0 4px 0;
+    font-weight:600;
+  }
+  input, select{
+    width:100%;
+    padding:11px 12px;
+    border-radius:10px;
+    border:1.5px solid var(--linea);
+    background:#fff;
+    color:var(--cafe);
+    font-size:15px;
+  }
+  input:focus, select:focus{outline:none; border-color:var(--naranja);}
+
+  .btn{
+    width:100%;
+    margin-top:14px;
+    padding:13px;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(135deg,var(--salsa),var(--naranja));
+    color:#fff;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:0.01em;
+  }
+  .btn:active{opacity:0.85;}
+  .btn.secundario{
+    background:var(--crema-2);
+    color:var(--salsa-2);
+    border:1.5px solid var(--naranja-2);
+  }
+  .btn.chico{width:auto; padding:7px 12px; font-size:12.5px; margin-top:0;}
+
+  ul.lista{list-style:none; margin:10px 0 0 0; padding:0;}
+  ul.lista li{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--linea);
+    font-size:13.5px;
+    gap:8px;
+  }
+  ul.lista li:last-child{border-bottom:none;}
+  ul.lista .izq{display:flex; flex-direction:column;}
+  ul.lista .izq b{font-size:14px;}
+  ul.lista .izq span{color:var(--cafe-suave); font-size:11.5px;}
+  ul.lista .der{display:flex; align-items:center; gap:8px; white-space:nowrap;}
+  .pill{
+    font-size:10.5px;
+    background:var(--menta);
+    color:var(--cafe);
+    padding:3px 8px;
+    border-radius:999px;
+    font-weight:700;
+  }
+  .del{
+    background:none; border:none; color:#b04a3f; font-size:17px; padding:2px 4px; cursor:pointer;
+  }
+
+  .vacio{
+    text-align:center;
+    color:var(--cafe-suave);
+    font-size:13px;
+    padding:14px 0;
+  }
+
+  .receta-item{
+    display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--linea);
+  }
+  .receta-total{
+    display:flex; justify-content:space-between; font-weight:800; padding-top:10px; margin-top:6px; border-top:2px solid var(--salsa); color:var(--salsa-2);
+  }
+
+  /* Barra inferior (celular) */
+  nav.tabs{
+    position:fixed; bottom:0; left:0; right:0;
+    background:#fff;
+    border-top:1px solid var(--linea);
+    display:flex;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    box-shadow:0 -4px 14px rgba(31,74,66,0.08);
+    z-index:50;
+  }
+  nav.tabs button{
+    flex:1;
+    background:none;
+    border:none;
+    padding:8px 2px;
+    text-align:center;
+    color:var(--cafe-suave);
+    font-size:10.5px;
+    font-weight:600;
+  }
+  nav.tabs button .ico{display:block; font-size:19px; margin-bottom:2px;}
+  nav.tabs button.activo{color:var(--salsa-2);}
+  nav.tabs button.activo .ico{transform:scale(1.1);}
+
+  /* Sidebar (PC) */
+  nav.sidebar{
+    display:none;
+  }
+
+  .vista{display:none;}
+  .vista.activa{display:block;}
+
+  .app-layout{display:flex; min-height:100vh;}
+  .app-content{flex:1; min-width:0;}
+
+  /* ---- Layout de escritorio ---- */
+  @media (min-width: 900px){
+    body{padding-bottom:0;}
+    header.top{display:none;}
+    nav.tabs{display:none;}
+
+    .app-layout{align-items:stretch;}
+    nav.sidebar{
+      display:flex;
+      flex-direction:column;
+      width:var(--sidebar-w);
+      flex-shrink:0;
+      background:var(--menta);
+      padding:22px 16px;
+      position:sticky;
+      top:0;
+      height:100vh;
+    }
+    nav.sidebar .marca{
+      display:flex; align-items:center; gap:9px;
+      margin-bottom:32px;
+      padding:0 6px;
+    }
+    nav.sidebar .marca .logo-emoji{font-size:24px;}
+    nav.sidebar .marca h1{font-size:18px; color:var(--cafe); margin:0;}
+    nav.sidebar button{
+      display:flex; align-items:center; gap:12px;
+      background:none; border:none;
+      text-align:left;
+      padding:11px 12px;
+      border-radius:11px;
+      font-size:14.5px;
+      font-weight:600;
+      color:var(--cafe-suave);
+      margin-bottom:4px;
+    }
+    nav.sidebar button .ico{font-size:18px;}
+    nav.sidebar button.activo{
+      background:var(--crema-card);
+      color:var(--cafe);
+    }
+
+    .app-content{padding:0;}
+    main{max-width:1000px; padding:26px 30px 40px 30px;}
+    .banner{border-radius:14px; margin:22px 22px 0 22px; padding:24px 26px 30px 26px;}
+    .banner h2{font-size:24px;}
+    main{margin-top:0;}
+    .grid2{grid-template-columns:1fr 1fr;}
+    .card{padding:20px 22px;}
+  }
+
+  .chart-wrap{background:#fff; border-radius:12px; padding:10px 6px; margin-top:10px;}
+  .toast{
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%);
+    background:var(--cafe); color:#fff; padding:9px 16px; border-radius:999px;
+    font-size:12.5px; opacity:0; transition:opacity 0.25s; pointer-events:none; z-index:100;
+  }
+  .toast.show{opacity:0.94;}
+  .divisor{
+    height:3px;
+    border-radius:3px;
+    margin:14px 0;
+    background:linear-gradient(90deg,var(--salsa),var(--naranja),var(--naranja-2));
+    opacity:0.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <nav class="sidebar">
+    <div class="marca"><span class="logo-emoji">🫓</span><h1>Tortas Gemma</h1></div>
+    <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
+    <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
+    <button class="tab-btn" data-vista="recetas" onclick="cambiarVista('recetas')"><span class="ico">📖</span>Recetas</button>
+    <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
+  </nav>
+
+  <div class="app-content">
+
+    <header class="top">
+      <div class="marca"><span class="logo-emoji">🫓</span><h1>Tortas Gemma</h1></div>
+      <div class="admin"><div class="avatar">👤</div></div>
+    </header>
+
+    <div class="banner">
+      <h2>Control diario del negocio</h2>
+      <p id="fechaHoy"></p>
+    </div>
+
+    <main>
+
+  <!-- VENTAS -->
+  <section id="vista-ventas" class="vista activa">
+    <div class="card">
+      <h2>Registrar venta</h2>
+      <label>Producto</label>
+      <select id="v-producto">
+        <option value="Torta" data-precio="30">Torta ($30)</option>
+        <option value="Chocoflan" data-precio="35">Chocoflan ($35)</option>
+      </select>
+      <div class="grid2">
+        <div>
+          <label>Turno</label>
+          <select id="v-turno">
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+          </select>
+        </div>
+        <div>
+          <label>Cantidad</label>
+          <input type="number" id="v-cantidad" min="1" value="1">
+        </div>
+      </div>
+      <label>Fecha</label>
+      <input type="date" id="v-fecha">
+      <button class="btn" onclick="agregarVenta()">+ Agregar venta</button>
+    </div>
+
+    <div class="card">
+      <h2>Hoy</h2>
+      <div class="grid2">
+        <div class="stat"><div class="num" id="hoyPiezas">0</div><div class="lbl">Piezas hoy</div></div>
+        <div class="stat"><div class="num" id="hoyIngreso">$0</div><div class="lbl">Ingreso hoy</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Historial de ventas</h2>
+      <ul class="lista" id="listaVentas"></ul>
+    </div>
+  </section>
+
+  <!-- COMPRAS -->
+  <section id="vista-compras" class="vista">
+    <div class="card">
+      <h2>Registrar compra / insumo</h2>
+      <label>Insumo</label>
+      <input type="text" id="c-nombre" placeholder="Ej. Carne de cerdo">
+      <div class="grid2">
+        <div>
+          <label>Cantidad (kg, pza, L)</label>
+          <input type="number" step="0.01" id="c-cantidad" placeholder="1">
+        </div>
+        <div>
+          <label>Costo total ($)</label>
+          <input type="number" step="0.01" id="c-costo" placeholder="122">
+        </div>
+      </div>
+      <label>Fecha</label>
+      <input type="date" id="c-fecha">
+      <button class="btn" onclick="agregarCompra()">+ Agregar compra</button>
+    </div>
+
+    <div class="card">
+      <h2>Gasto total en compras</h2>
+      <div class="stat" style="width:100%"><div class="num" id="totalCompras">$0</div><div class="lbl">Acumulado</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Historial de compras</h2>
+      <ul class="lista" id="listaCompras"></ul>
+    </div>
+  </section>
+
+  <!-- RECETAS -->
+  <section id="vista-recetas" class="vista">
+    <div class="card">
+      <h2>Costeo · Torta ahogada Gemma</h2>
+      <p style="font-size:12.5px;color:var(--cafe-suave);margin-top:0;">Receta base para 12 piezas · costo por pieza</p>
+      <div id="recetaTorta"></div>
+    </div>
+    <div class="card">
+      <h2>Costeo · Chocoflan</h2>
+      <p style="font-size:12.5px;color:var(--cafe-suave);margin-top:0;">Se compra hecho, rinde 12 rebanadas</p>
+      <div id="recetaChocoflan"></div>
+    </div>
+    <div class="card">
+      <h2>Notas de receta</h2>
+      <p style="font-size:13px;line-height:1.5;">
+        <b>Salsa (para 3 lonches):</b> 3 jitomates saladet (~370g) cocidos con clavo, laurel, pimienta gorda y orégano; licuados con chile chipotle al gusto y colados. Se licúan de nuevo con 95g de puré de tomate, 3 cdas de mayonesa/crema y ¼ cdta de caldo de pollo en polvo. Se sazona con ¼ cdta de sal al final.
+      </p>
+      <p style="font-size:13px;line-height:1.5;">
+        <b>Carne:</b> medio kilo de pierna o espalda de cerdo con cebolla, ajo, laurel y sal. Extras opcionales: jitomate, aguacate, cilantro.
+      </p>
+    </div>
+  </section>
+
+  <!-- RESUMEN -->
+  <section id="vista-resumen" class="vista">
+    <div class="card">
+      <h2>Resumen general</h2>
+      <div class="grid2">
+        <div class="stat"><div class="num" id="r-piezas">0</div><div class="lbl">Piezas vendidas</div></div>
+        <div class="stat"><div class="num" id="r-ingresos">$0</div><div class="lbl">Ingresos totales</div></div>
+        <div class="stat"><div class="num" id="r-gastos">$0</div><div class="lbl">Gastos (compras)</div></div>
+        <div class="stat"><div class="num" id="r-ganancia">$0</div><div class="lbl">Ganancia neta</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Ventas por día</h2>
+      <div class="chart-wrap"><canvas id="chartDias" height="180"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Mañana vs. Tarde</h2>
+      <div class="chart-wrap"><canvas id="chartTurno" height="180"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Tortas vs. Chocoflanes</h2>
+      <div class="chart-wrap"><canvas id="chartProducto" height="180"></canvas></div>
+    </div>
+
+    <div class="card">
+      <button class="btn secundario" onclick="borrarTodo()">Borrar todos los datos</button>
+    </div>
+  </section>
+
+    </main>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<nav class="tabs">
+  <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
+  <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
+  <button class="tab-btn" data-vista="recetas" onclick="cambiarVista('recetas')"><span class="ico">📖</span>Recetas</button>
+  <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
+</nav>
+
+<script>
+/* ---------- Almacenamiento persistente ---------- */
+async function cargar(clave, porDefecto){
+  try{
+    const r = await window.storage.get(clave, false);
+    return r ? JSON.parse(r.value) : porDefecto;
+  }catch(e){ return porDefecto; }
+}
+async function guardar(clave, valor){
+  try{ await window.storage.set(clave, JSON.stringify(valor), false); }
+  catch(e){ console.error('storage error', e); }
+}
+
+let ventas = [];
+let compras = [];
+
+const RECETA_TORTA = [
+  {ing:'Birote (1/8 de tira de 8)', costo:4},
+  {ing:'Carne de cerdo (~83g)', costo:10},
+  {ing:'Jitomate (~83g)', costo:1.70},
+  {ing:'Puré de tomate (~83g)', costo:1.35},
+  {ing:'Crema', costo:1},
+  {ing:'Mayonesa', costo:2},
+  {ing:'Mostaza', costo:0.10},
+  {ing:'Cebolla', costo:0.20},
+  {ing:'Ajo', costo:0.10},
+  {ing:'Laurel', costo:0.04},
+  {ing:'Pimienta', costo:0.0083},
+  {ing:'Clavo', costo:0.0083},
+  {ing:'Sal', costo:0.025},
+];
+
+const CHOCOFLAN = { costoTotal:210, rebanadas:12, precioVenta:35, charolita:2.90, cucharita:0.30 };
+
+/* datos iniciales conocidos, solo se usan si aun no hay nada guardado */
+const VENTAS_SEMILLA = [
+  {fecha:'2026-08-11', turno:'Tarde', producto:'Torta', cantidad:11, precio:30},
+  {fecha:'2026-08-12', turno:'Mañana', producto:'Torta', cantidad:3, precio:30},
+  {fecha:'2026-08-12', turno:'Tarde', producto:'Torta', cantidad:5, precio:30},
+  {fecha:'2026-08-13', turno:'Mañana', producto:'Torta', cantidad:6, precio:30},
+  {fecha:'2026-08-13', turno:'Tarde', producto:'Torta', cantidad:9, precio:30},
+  {fecha:'2026-08-13', turno:'Tarde', producto:'Chocoflan', cantidad:7, precio:35},
+  {fecha:'2026-08-14', turno:'Mañana', producto:'Torta', cantidad:7, precio:30},
+  {fecha:'2026-08-14', turno:'Mañana', producto:'Chocoflan', cantidad:3, precio:35},
+];
+
+function hoyISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function fmtFecha(iso){
+  const [y,m,d] = iso.split('-');
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${parseInt(d)} ${meses[parseInt(m)-1]}`;
+}
+
+/* ---------- Inicio ---------- */
+async function init(){
+  document.getElementById('v-fecha').value = hoyISO();
+  document.getElementById('c-fecha').value = hoyISO();
+  document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long', day:'numeric', month:'long'});
+
+  ventas = await cargar('ventas', null);
+  if(ventas === null){
+    ventas = VENTAS_SEMILLA;
+    await guardar('ventas', ventas);
+  }
+  compras = await cargar('compras', []);
+
+  renderRecetaTorta();
+  renderRecetaChocoflan();
+  renderTodo();
+}
+
+function renderRecetaChocoflan(){
+  const cont = document.getElementById('recetaChocoflan');
+  const costoPza = CHOCOFLAN.costoTotal / CHOCOFLAN.rebanadas;
+  const costoTotalPza = costoPza + CHOCOFLAN.charolita + CHOCOFLAN.cucharita;
+  const ganancia = CHOCOFLAN.precioVenta - costoTotalPza;
+  cont.innerHTML = `
+    <div class="receta-item"><span>Chocoflan completo (12 rebanadas)</span><span>$${CHOCOFLAN.costoTotal.toFixed(2)}</span></div>
+    <div class="receta-item"><span>Costo del chocoflan por rebanada</span><span>$${costoPza.toFixed(2)}</span></div>
+    <div class="receta-item"><span>Charolita</span><span>$${CHOCOFLAN.charolita.toFixed(2)}</span></div>
+    <div class="receta-item"><span>Cucharita</span><span>$${CHOCOFLAN.cucharita.toFixed(2)}</span></div>
+    <div class="receta-total"><span>Costo total por rebanada</span><span>$${costoTotalPza.toFixed(2)}</span></div>
+    <div class="receta-item" style="margin-top:8px;"><span>Precio de venta</span><span>$${CHOCOFLAN.precioVenta.toFixed(2)}</span></div>
+    <div class="receta-item"><span>Ganancia por rebanada</span><span>$${ganancia.toFixed(2)}</span></div>
+  `;
+}
+
+function renderRecetaTorta(){
+  const cont = document.getElementById('recetaTorta');
+  let total = 0;
+  let html = '';
+  RECETA_TORTA.forEach(r=>{
+    total += r.costo;
+    html += `<div class="receta-item"><span>${r.ing}</span><span>$${r.costo.toFixed(2)}</span></div>`;
+  });
+  html += `<div class="receta-total"><span>Costo por torta</span><span>$${total.toFixed(2)}</span></div>`;
+  html += `<div class="receta-item" style="margin-top:8px;"><span>Precio de venta</span><span>$30.00</span></div>`;
+  html += `<div class="receta-item"><span>Ganancia por pieza</span><span>$${(30-total).toFixed(2)}</span></div>`;
+  cont.innerHTML = html;
+}
+
+/* ---------- Navegación ---------- */
+function cambiarVista(v){
+  document.querySelectorAll('.vista').forEach(s=>s.classList.remove('activa'));
+  document.getElementById('vista-'+v).classList.add('activa');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('activo'));
+  document.querySelectorAll(`.tab-btn[data-vista="${v}"]`).forEach(b=>b.classList.add('activo'));
+  if(v==='resumen') dibujarGraficos();
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+/* ---------- Ventas ---------- */
+document.getElementById('v-producto').addEventListener('change', function(){});
+
+async function agregarVenta(){
+  const producto = document.getElementById('v-producto').value;
+  const precio = parseFloat(document.getElementById('v-producto').selectedOptions[0].dataset.precio);
+  const turno = document.getElementById('v-turno').value;
+  const cantidad = parseInt(document.getElementById('v-cantidad').value) || 0;
+  const fecha = document.getElementById('v-fecha').value || hoyISO();
+  if(cantidad <= 0){ toast('Pon una cantidad válida'); return; }
+
+  ventas.push({fecha, turno, producto, cantidad, precio});
+  await guardar('ventas', ventas);
+  document.getElementById('v-cantidad').value = 1;
+  toast('Venta agregada ✓');
+  renderTodo();
+}
+
+async function borrarVenta(i){
+  ventas.splice(i,1);
+  await guardar('ventas', ventas);
+  renderTodo();
+}
+
+function renderVentas(){
+  const lista = document.getElementById('listaVentas');
+  if(ventas.length===0){ lista.innerHTML = '<li class="vacio">Sin ventas registradas todavía</li>'; return; }
+  const ordenadas = ventas.map((v,i)=>({...v,i})).sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+  lista.innerHTML = ordenadas.map(v=>`
+    <li>
+      <div class="izq">
+        <b>${v.producto} x${v.cantidad}</b>
+        <span>${fmtFecha(v.fecha)} · ${v.turno}</span>
+      </div>
+      <div class="der">
+        <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
+        <button class="del" onclick="borrarVenta(${v.i})">✕</button>
+      </div>
+    </li>
+  `).join('');
+
+  const hoy = hoyISO();
+  const deHoy = ventas.filter(v=>v.fecha===hoy);
+  document.getElementById('hoyPiezas').textContent = deHoy.reduce((s,v)=>s+v.cantidad,0);
+  document.getElementById('hoyIngreso').textContent = '$'+deHoy.reduce((s,v)=>s+v.cantidad*v.precio,0).toLocaleString();
+}
+
+/* ---------- Compras ---------- */
+async function agregarCompra(){
+  const nombre = document.getElementById('c-nombre').value.trim();
+  const cantidad = parseFloat(document.getElementById('c-cantidad').value) || 0;
+  const costo = parseFloat(document.getElementById('c-costo').value) || 0;
+  const fecha = document.getElementById('c-fecha').value || hoyISO();
+  if(!nombre || costo<=0){ toast('Completa insumo y costo'); return; }
+
+  compras.push({nombre, cantidad, costo, fecha});
+  await guardar('compras', compras);
+  document.getElementById('c-nombre').value = '';
+  document.getElementById('c-cantidad').value = '';
+  document.getElementById('c-costo').value = '';
+  toast('Compra agregada ✓');
+  renderTodo();
+}
+
+async function borrarCompra(i){
+  compras.splice(i,1);
+  await guardar('compras', compras);
+  renderTodo();
+}
+
+function renderCompras(){
+  const lista = document.getElementById('listaCompras');
+  if(compras.length===0){ lista.innerHTML = '<li class="vacio">Sin compras registradas todavía</li>'; return; }
+  const ordenadas = compras.map((c,i)=>({...c,i})).sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+  lista.innerHTML = ordenadas.map(c=>`
+    <li>
+      <div class="izq">
+        <b>${c.nombre}</b>
+        <span>${fmtFecha(c.fecha)}${c.cantidad?(' · '+c.cantidad):''}</span>
+      </div>
+      <div class="der">
+        <span class="pill" style="background:var(--crema-2);color:var(--cafe-suave);">$${c.costo.toLocaleString()}</span>
+        <button class="del" onclick="borrarCompra(${c.i})">✕</button>
+      </div>
+    </li>
+  `).join('');
+  document.getElementById('totalCompras').textContent = '$'+compras.reduce((s,c)=>s+c.costo,0).toLocaleString();
+}
+
+/* ---------- Resumen ---------- */
+function renderResumen(){
+  const piezas = ventas.reduce((s,v)=>s+v.cantidad,0);
+  const ingresos = ventas.reduce((s,v)=>s+v.cantidad*v.precio,0);
+  const gastos = compras.reduce((s,c)=>s+c.costo,0);
+  document.getElementById('r-piezas').textContent = piezas;
+  document.getElementById('r-ingresos').textContent = '$'+ingresos.toLocaleString();
+  document.getElementById('r-gastos').textContent = '$'+gastos.toLocaleString();
+  document.getElementById('r-ganancia').textContent = '$'+(ingresos-gastos).toLocaleString();
+}
+
+let charts = {};
+function dibujarGraficos(){
+  const porDia = {};
+  const porTurno = {'Mañana':0,'Tarde':0};
+  const porProducto = {};
+  ventas.forEach(v=>{
+    porDia[v.fecha] = (porDia[v.fecha]||0) + v.cantidad;
+    porTurno[v.turno] = (porTurno[v.turno]||0) + v.cantidad;
+    porProducto[v.producto] = (porProducto[v.producto]||0) + v.cantidad;
+  });
+  const diasOrdenados = Object.keys(porDia).sort();
+
+  const paleta = {
+    salsa:'#C6362A', naranja:'#E8823A', naranjaClaro:'#F2A459', crema:'#FDEBD3', cafe:'#4A1F17'
+  };
+
+  if(charts.dias) charts.dias.destroy();
+  charts.dias = new Chart(document.getElementById('chartDias'), {
+    type:'bar',
+    data:{
+      labels:diasOrdenados.map(fmtFecha),
+      datasets:[{ data:diasOrdenados.map(d=>porDia[d]), backgroundColor:paleta.salsa, borderRadius:6 }]
+    },
+    options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:5}} } }
+  });
+
+  if(charts.turno) charts.turno.destroy();
+  charts.turno = new Chart(document.getElementById('chartTurno'), {
+    type:'doughnut',
+    data:{
+      labels:Object.keys(porTurno),
+      datasets:[{ data:Object.values(porTurno), backgroundColor:[paleta.naranjaClaro, paleta.salsa] }]
+    },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
+  });
+
+  if(charts.producto) charts.producto.destroy();
+  charts.producto = new Chart(document.getElementById('chartProducto'), {
+    type:'doughnut',
+    data:{
+      labels:Object.keys(porProducto),
+      datasets:[{ data:Object.values(porProducto), backgroundColor:[paleta.salsa, paleta.naranja, paleta.cafe] }]
+    },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
+  });
+}
+
+function renderTodo(){
+  renderVentas();
+  renderCompras();
+  renderResumen();
+}
+
+async function borrarTodo(){
+  if(!confirm('¿Seguro que quieres borrar todos los datos guardados? Esta acción no se puede deshacer.')) return;
+  ventas = [];
+  compras = [];
+  await guardar('ventas', ventas);
+  await guardar('compras', compras);
+  renderTodo();
+  dibujarGraficos();
+  toast('Datos borrados');
+}
+
+init();
+</script>
+</body>
+</html>
