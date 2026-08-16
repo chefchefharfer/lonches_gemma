@@ -7,17 +7,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root{
-    --salsa: #C6362A;      /* jitomate crudo, botones */
+    --salsa: #C6362A;
     --salsa-2: #A82B21;
-    --naranja: #E8923A;    /* banner */
+    --naranja: #E8923A;
     --naranja-2: #F2A459;
-    --menta: #C7E3D3;      /* sidebar / header */
+    --menta: #C7E3D3;
     --menta-2: #B4D9C4;
-    --crema: #F4EEDD;      /* fondo general */
-    --crema-card: #FDF7E9; /* tarjetas */
-    --cafe: #1F4A42;       /* texto principal (verde-teal oscuro) */
+    --crema: #F4EEDD;
+    --crema-card: #FDF7E9;
+    --cafe: #1F4A42;
     --cafe-suave: #5C7C72;
     --verde: #4C7A3D;
+    --rojo-neg: #B0392E;
     --linea: #DCE9DE;
     --sombra: 0 2px 10px rgba(31,74,66,0.08);
     --radio: 16px;
@@ -50,9 +51,7 @@
   header.top .marca{display:flex; align-items:center; gap:10px;}
   header.top .marca .logo-emoji{font-size:24px;}
   header.top h1{font-size:19px; color:var(--cafe); margin:0;}
-  header.top .admin{
-    display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600;
-  }
+  header.top .admin{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600;}
   header.top .admin .avatar{
     width:30px; height:30px; border-radius:50%;
     background:var(--naranja-2); color:#fff;
@@ -79,8 +78,10 @@
   }
   .card h2{font-size:17px; color:var(--cafe);}
   .card h3{font-size:14px; color:var(--cafe-suave); margin-top:14px;}
+  .card .sub{font-size:12px; color:var(--cafe-suave); margin:2px 0 10px 0;}
 
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
   .stat{
     background:var(--menta);
     border-radius:12px;
@@ -88,6 +89,8 @@
     text-align:center;
   }
   .stat .num{font-size:22px; font-weight:800; color:var(--salsa-2); font-family:Georgia,serif;}
+  .stat .num.pos{color:var(--verde);}
+  .stat .num.neg{color:var(--rojo-neg);}
   .stat .lbl{font-size:11px; color:var(--cafe-suave); text-transform:uppercase; letter-spacing:0.04em;}
 
   label{
@@ -122,9 +125,9 @@
   }
   .btn:active{opacity:0.85;}
   .btn.secundario{
-    background:var(--crema-2);
-    color:var(--salsa-2);
-    border:1.5px solid var(--naranja-2);
+    background:var(--menta);
+    color:var(--cafe);
+    border:1.5px solid var(--menta-2);
   }
   .btn.chico{width:auto; padding:7px 12px; font-size:12.5px; margin-top:0;}
 
@@ -151,31 +154,51 @@
     border-radius:999px;
     font-weight:700;
   }
-  .del{
-    background:none; border:none; color:#b04a3f; font-size:17px; padding:2px 4px; cursor:pointer;
-  }
+  .del{background:none; border:none; color:#b04a3f; font-size:17px; padding:2px 4px; cursor:pointer;}
 
-  .vacio{
-    text-align:center;
-    color:var(--cafe-suave);
-    font-size:13px;
-    padding:14px 0;
-  }
+  .vacio{text-align:center; color:var(--cafe-suave); font-size:13px; padding:14px 0;}
 
-  .receta-item{
-    display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--linea);
-  }
-  .receta-total{
-    display:flex; justify-content:space-between; font-weight:800; padding-top:10px; margin-top:6px; border-top:2px solid var(--salsa); color:var(--salsa-2);
-  }
+  .receta-item{display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--linea); gap:8px;}
+  .receta-item input[type=text]{padding:6px 8px; font-size:12.5px; flex:1;}
+  .receta-item input[type=number]{padding:6px 8px; font-size:12.5px; width:80px; text-align:right;}
+  .receta-total{display:flex; justify-content:space-between; font-weight:800; padding-top:10px; margin-top:6px; border-top:2px solid var(--salsa); color:var(--salsa-2);}
 
-  /* Barra inferior (celular) */
+  /* Semanas colapsables */
+  .semana{border:1px solid var(--linea); border-radius:12px; margin-bottom:10px; overflow:hidden;}
+  .semana-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 14px; background:var(--menta); cursor:pointer;
+  }
+  .semana-header .titulo{font-size:13.5px; font-weight:700; color:var(--cafe);}
+  .semana-header .titulo small{display:block; font-weight:500; font-size:11px; color:var(--cafe-suave); margin-top:1px;}
+  .semana-header .resumen-mini{display:flex; align-items:center; gap:8px;}
+  .semana-header .chevron{transition:transform 0.2s; font-size:13px;}
+  .semana.abierta .chevron{transform:rotate(90deg);}
+  .semana-body{max-height:0; overflow:hidden; transition:max-height 0.25s ease;}
+  .semana.abierta .semana-body{max-height:1400px;}
+  .semana-body ul.lista{padding:0 14px; margin:0;}
+  .semana-body ul.lista li{font-size:12.5px;}
+
+  /* Productos configurables */
+  .producto-card{border:1.5px solid var(--linea); border-radius:14px; padding:14px; margin-bottom:12px; background:#fff;}
+  .producto-card .encabezado{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+  .producto-card .encabezado input[type=text]{font-size:15px; font-weight:700; border:none; background:none; padding:2px 0; color:var(--cafe); width:auto; flex:1;}
+  .extra-row{display:flex; gap:6px; align-items:center; margin-top:6px;}
+  .extra-row input[type=text]{flex:1.4;}
+  .extra-row input[type=number]{flex:0.8; text-align:right;}
+  .margen-badge{
+    display:inline-flex; gap:4px; align-items:baseline;
+    background:var(--menta); color:var(--cafe); border-radius:999px;
+    padding:4px 10px; font-size:11.5px; font-weight:700;
+  }
+  .margen-badge.neg{background:#F6DAD6; color:var(--rojo-neg);}
+
   nav.tabs{
     position:fixed; bottom:0; left:0; right:0;
     background:#fff;
     border-top:1px solid var(--linea);
     display:flex;
-    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));
     box-shadow:0 -4px 14px rgba(31,74,66,0.08);
     z-index:50;
   }
@@ -183,20 +206,17 @@
     flex:1;
     background:none;
     border:none;
-    padding:8px 2px;
+    padding:7px 1px;
     text-align:center;
     color:var(--cafe-suave);
-    font-size:10.5px;
+    font-size:9.5px;
     font-weight:600;
   }
-  nav.tabs button .ico{display:block; font-size:19px; margin-bottom:2px;}
+  nav.tabs button .ico{display:block; font-size:17px; margin-bottom:1px;}
   nav.tabs button.activo{color:var(--salsa-2);}
   nav.tabs button.activo .ico{transform:scale(1.1);}
 
-  /* Sidebar (PC) */
-  nav.sidebar{
-    display:none;
-  }
+  nav.sidebar{display:none;}
 
   .vista{display:none;}
   .vista.activa{display:block;}
@@ -204,53 +224,30 @@
   .app-layout{display:flex; min-height:100vh;}
   .app-content{flex:1; min-width:0;}
 
-  /* ---- Layout de escritorio ---- */
   @media (min-width: 900px){
     body{padding-bottom:0;}
     header.top{display:none;}
     nav.tabs{display:none;}
-
-    .app-layout{align-items:stretch;}
     nav.sidebar{
-      display:flex;
-      flex-direction:column;
-      width:var(--sidebar-w);
-      flex-shrink:0;
-      background:var(--menta);
-      padding:22px 16px;
-      position:sticky;
-      top:0;
-      height:100vh;
+      display:flex; flex-direction:column;
+      width:var(--sidebar-w); flex-shrink:0;
+      background:var(--menta); padding:22px 16px;
+      position:sticky; top:0; height:100vh;
     }
-    nav.sidebar .marca{
-      display:flex; align-items:center; gap:9px;
-      margin-bottom:32px;
-      padding:0 6px;
-    }
+    nav.sidebar .marca{display:flex; align-items:center; gap:9px; margin-bottom:32px; padding:0 6px;}
     nav.sidebar .marca .logo-emoji{font-size:24px;}
     nav.sidebar .marca h1{font-size:18px; color:var(--cafe); margin:0;}
     nav.sidebar button{
       display:flex; align-items:center; gap:12px;
-      background:none; border:none;
-      text-align:left;
-      padding:11px 12px;
-      border-radius:11px;
-      font-size:14.5px;
-      font-weight:600;
-      color:var(--cafe-suave);
-      margin-bottom:4px;
+      background:none; border:none; text-align:left;
+      padding:11px 12px; border-radius:11px;
+      font-size:14px; font-weight:600; color:var(--cafe-suave); margin-bottom:4px;
     }
     nav.sidebar button .ico{font-size:18px;}
-    nav.sidebar button.activo{
-      background:var(--crema-card);
-      color:var(--cafe);
-    }
-
-    .app-content{padding:0;}
+    nav.sidebar button.activo{background:var(--crema-card); color:var(--cafe);}
     main{max-width:1000px; padding:26px 30px 40px 30px;}
     .banner{border-radius:14px; margin:22px 22px 0 22px; padding:24px 26px 30px 26px;}
     .banner h2{font-size:24px;}
-    main{margin-top:0;}
     .grid2{grid-template-columns:1fr 1fr;}
     .card{padding:20px 22px;}
   }
@@ -262,13 +259,6 @@
     font-size:12.5px; opacity:0; transition:opacity 0.25s; pointer-events:none; z-index:100;
   }
   .toast.show{opacity:0.94;}
-  .divisor{
-    height:3px;
-    border-radius:3px;
-    margin:14px 0;
-    background:linear-gradient(90deg,var(--salsa),var(--naranja),var(--naranja-2));
-    opacity:0.5;
-  }
 </style>
 </head>
 <body>
@@ -279,7 +269,8 @@
     <div class="marca"><span class="logo-emoji">🫓</span><h1>Tortas Gemma</h1></div>
     <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
     <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
-    <button class="tab-btn" data-vista="recetas" onclick="cambiarVista('recetas')"><span class="ico">📖</span>Recetas</button>
+    <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingredientes</button>
+    <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Productos</button>
     <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
   </nav>
 
@@ -297,133 +288,155 @@
 
     <main>
 
-  <!-- VENTAS -->
-  <section id="vista-ventas" class="vista activa">
-    <div class="card">
-      <h2>Registrar venta</h2>
-      <label>Producto</label>
-      <select id="v-producto">
-        <option value="Torta" data-precio="30">Torta ($30)</option>
-        <option value="Chocoflan" data-precio="35">Chocoflan ($35)</option>
-      </select>
-      <div class="grid2">
-        <div>
-          <label>Turno</label>
-          <select id="v-turno">
-            <option value="Mañana">Mañana</option>
-            <option value="Tarde">Tarde</option>
-          </select>
+      <!-- VENTAS -->
+      <section id="vista-ventas" class="vista activa">
+        <div class="card">
+          <h2>Registrar venta</h2>
+          <label>Producto</label>
+          <select id="v-producto"></select>
+          <div class="grid2">
+            <div>
+              <label>Turno</label>
+              <select id="v-turno">
+                <option value="Mañana">Mañana</option>
+                <option value="Tarde">Tarde</option>
+              </select>
+            </div>
+            <div>
+              <label>Cantidad</label>
+              <input type="number" id="v-cantidad" min="1" value="1">
+            </div>
+          </div>
+          <label>Fecha</label>
+          <input type="date" id="v-fecha">
+          <button class="btn" onclick="agregarVenta()">+ Agregar venta</button>
         </div>
-        <div>
-          <label>Cantidad</label>
-          <input type="number" id="v-cantidad" min="1" value="1">
+
+        <div class="card">
+          <h2>Hoy</h2>
+          <div class="grid2">
+            <div class="stat"><div class="num" id="hoyPiezas">0</div><div class="lbl">Piezas hoy</div></div>
+            <div class="stat"><div class="num" id="hoyIngreso">$0</div><div class="lbl">Ingreso hoy</div></div>
+          </div>
         </div>
-      </div>
-      <label>Fecha</label>
-      <input type="date" id="v-fecha">
-      <button class="btn" onclick="agregarVenta()">+ Agregar venta</button>
-    </div>
 
-    <div class="card">
-      <h2>Hoy</h2>
-      <div class="grid2">
-        <div class="stat"><div class="num" id="hoyPiezas">0</div><div class="lbl">Piezas hoy</div></div>
-        <div class="stat"><div class="num" id="hoyIngreso">$0</div><div class="lbl">Ingreso hoy</div></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>Historial de ventas</h2>
-      <ul class="lista" id="listaVentas"></ul>
-    </div>
-  </section>
-
-  <!-- COMPRAS -->
-  <section id="vista-compras" class="vista">
-    <div class="card">
-      <h2>Registrar compra / insumo</h2>
-      <label>Insumo</label>
-      <input type="text" id="c-nombre" placeholder="Ej. Carne de cerdo">
-      <div class="grid2">
-        <div>
-          <label>Cantidad (kg, pza, L)</label>
-          <input type="number" step="0.01" id="c-cantidad" placeholder="1">
+        <div class="card">
+          <h2>Historial de ventas por semana</h2>
+          <p class="sub">Toca una semana para desplegarla</p>
+          <div id="listaSemanas"></div>
         </div>
-        <div>
-          <label>Costo total ($)</label>
-          <input type="number" step="0.01" id="c-costo" placeholder="122">
+      </section>
+
+      <!-- COMPRAS -->
+      <section id="vista-compras" class="vista">
+        <div class="card">
+          <h2>Registrar compra / insumo</h2>
+          <label>Insumo</label>
+          <input type="text" id="c-nombre" placeholder="Ej. Carne de cerdo">
+          <div class="grid2">
+            <div>
+              <label>Cantidad (kg, pza, L)</label>
+              <input type="number" step="0.01" id="c-cantidad" placeholder="1">
+            </div>
+            <div>
+              <label>Costo total ($)</label>
+              <input type="number" step="0.01" id="c-costo" placeholder="122">
+            </div>
+          </div>
+          <label>Fecha</label>
+          <input type="date" id="c-fecha">
+          <button class="btn" onclick="agregarCompra()">+ Agregar compra</button>
         </div>
-      </div>
-      <label>Fecha</label>
-      <input type="date" id="c-fecha">
-      <button class="btn" onclick="agregarCompra()">+ Agregar compra</button>
-    </div>
 
-    <div class="card">
-      <h2>Gasto total en compras</h2>
-      <div class="stat" style="width:100%"><div class="num" id="totalCompras">$0</div><div class="lbl">Acumulado</div></div>
-    </div>
+        <div class="card">
+          <h2>Gasto total en compras</h2>
+          <div class="stat" style="width:100%"><div class="num" id="totalCompras">$0</div><div class="lbl">Acumulado</div></div>
+        </div>
 
-    <div class="card">
-      <h2>Historial de compras</h2>
-      <ul class="lista" id="listaCompras"></ul>
-    </div>
-  </section>
+        <div class="card">
+          <h2>Historial de compras</h2>
+          <ul class="lista" id="listaCompras"></ul>
+        </div>
+      </section>
 
-  <!-- RECETAS -->
-  <section id="vista-recetas" class="vista">
-    <div class="card">
-      <h2>Costeo · Torta ahogada Gemma</h2>
-      <p style="font-size:12.5px;color:var(--cafe-suave);margin-top:0;">Receta base para 12 piezas · costo por pieza</p>
-      <div id="recetaTorta"></div>
-    </div>
-    <div class="card">
-      <h2>Costeo · Chocoflan</h2>
-      <p style="font-size:12.5px;color:var(--cafe-suave);margin-top:0;">Se compra hecho, rinde 12 rebanadas</p>
-      <div id="recetaChocoflan"></div>
-    </div>
-    <div class="card">
-      <h2>Notas de receta</h2>
-      <p style="font-size:13px;line-height:1.5;">
-        <b>Salsa (para 3 lonches):</b> 3 jitomates saladet (~370g) cocidos con clavo, laurel, pimienta gorda y orégano; licuados con chile chipotle al gusto y colados. Se licúan de nuevo con 95g de puré de tomate, 3 cdas de mayonesa/crema y ¼ cdta de caldo de pollo en polvo. Se sazona con ¼ cdta de sal al final.
-      </p>
-      <p style="font-size:13px;line-height:1.5;">
-        <b>Carne:</b> medio kilo de pierna o espalda de cerdo con cebolla, ajo, laurel y sal. Extras opcionales: jitomate, aguacate, cilantro.
-      </p>
-    </div>
-  </section>
+      <!-- INGREDIENTES (costeo de la torta) -->
+      <section id="vista-ingredientes" class="vista">
+        <div class="card">
+          <h2>Ingredientes de la torta</h2>
+          <p class="sub">Actualiza el costo de cada ingrediente por pieza — el costeo se recalcula solo</p>
+          <div id="listaIngredientes"></div>
+          <button class="btn secundario chico" style="margin-top:12px;width:100%;" onclick="agregarIngrediente()">+ Agregar ingrediente</button>
+        </div>
 
-  <!-- RESUMEN -->
-  <section id="vista-resumen" class="vista">
-    <div class="card">
-      <h2>Resumen general</h2>
-      <div class="grid2">
-        <div class="stat"><div class="num" id="r-piezas">0</div><div class="lbl">Piezas vendidas</div></div>
-        <div class="stat"><div class="num" id="r-ingresos">$0</div><div class="lbl">Ingresos totales</div></div>
-        <div class="stat"><div class="num" id="r-gastos">$0</div><div class="lbl">Gastos (compras)</div></div>
-        <div class="stat"><div class="num" id="r-ganancia">$0</div><div class="lbl">Ganancia neta</div></div>
-      </div>
-    </div>
+        <div class="card">
+          <h2>Costeo de la torta</h2>
+          <div class="grid2">
+            <div>
+              <label>Precio de venta ($)</label>
+              <input type="number" step="0.01" id="ing-precio" value="30" oninput="renderIngredientes()">
+            </div>
+            <div>
+              <label>Mano de obra / pieza ($)</label>
+              <input type="number" step="0.01" id="ing-manoobra" value="2.30" oninput="renderIngredientes()">
+            </div>
+          </div>
+          <label>Costos fijos e indirectos / pieza ($) — luz, gas, transporte, etc. prorrateados</label>
+          <input type="number" step="0.01" id="ing-indirectos" value="1.90" oninput="renderIngredientes()">
 
-    <div class="card">
-      <h2>Ventas por día</h2>
-      <div class="chart-wrap"><canvas id="chartDias" height="180"></canvas></div>
-    </div>
+          <div class="grid2" style="margin-top:14px;">
+            <div class="stat"><div class="num" id="ing-costoInsumos">$0</div><div class="lbl">Costo insumos</div></div>
+            <div class="stat"><div class="num" id="ing-costoTotal">$0</div><div class="lbl">Costo total/pieza</div></div>
+            <div class="stat"><div class="num" id="ing-margenBruto">$0</div><div class="lbl">Margen bruto</div></div>
+            <div class="stat"><div class="num" id="ing-margenNeto">$0</div><div class="lbl">Margen neto</div></div>
+          </div>
+          <div class="grid2" style="margin-top:10px;">
+            <div class="stat"><div class="num" id="ing-pctBruto">0%</div><div class="lbl">% Margen bruto</div></div>
+            <div class="stat"><div class="num" id="ing-pctNeto">0%</div><div class="lbl">% Margen neto</div></div>
+          </div>
+        </div>
+      </section>
 
-    <div class="card">
-      <h2>Mañana vs. Tarde</h2>
-      <div class="chart-wrap"><canvas id="chartTurno" height="180"></canvas></div>
-    </div>
+      <!-- PRODUCTOS (chocoflan y otros) -->
+      <section id="vista-productos" class="vista">
+        <div class="card">
+          <h2>Otros productos</h2>
+          <p class="sub">Chocoflan y cualquier otro producto nuevo que decidas vender. Pon el costo y el precio de venta, y aquí se calculan los márgenes.</p>
+          <div id="listaProductos"></div>
+          <button class="btn secundario" onclick="agregarProducto()">+ Agregar producto nuevo</button>
+        </div>
+      </section>
 
-    <div class="card">
-      <h2>Tortas vs. Chocoflanes</h2>
-      <div class="chart-wrap"><canvas id="chartProducto" height="180"></canvas></div>
-    </div>
+      <!-- RESUMEN -->
+      <section id="vista-resumen" class="vista">
+        <div class="card">
+          <h2>Resumen general</h2>
+          <div class="grid2">
+            <div class="stat"><div class="num" id="r-piezas">0</div><div class="lbl">Piezas vendidas</div></div>
+            <div class="stat"><div class="num" id="r-ingresos">$0</div><div class="lbl">Ingresos totales</div></div>
+            <div class="stat"><div class="num" id="r-gastos">$0</div><div class="lbl">Gastos (compras)</div></div>
+            <div class="stat"><div class="num" id="r-ganancia">$0</div><div class="lbl">Ganancia neta</div></div>
+          </div>
+        </div>
 
-    <div class="card">
-      <button class="btn secundario" onclick="borrarTodo()">Borrar todos los datos</button>
-    </div>
-  </section>
+        <div class="card">
+          <h2>Ventas por día</h2>
+          <div class="chart-wrap"><canvas id="chartDias" height="180"></canvas></div>
+        </div>
+
+        <div class="card">
+          <h2>Mañana vs. Tarde</h2>
+          <div class="chart-wrap"><canvas id="chartTurno" height="180"></canvas></div>
+        </div>
+
+        <div class="card">
+          <h2>Ventas por producto</h2>
+          <div class="chart-wrap"><canvas id="chartProducto" height="180"></canvas></div>
+        </div>
+
+        <div class="card">
+          <button class="btn secundario" onclick="borrarTodo()">Borrar todos los datos</button>
+        </div>
+      </section>
 
     </main>
 
@@ -435,7 +448,8 @@
 <nav class="tabs">
   <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
   <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
-  <button class="tab-btn" data-vista="recetas" onclick="cambiarVista('recetas')"><span class="ico">📖</span>Recetas</button>
+  <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingr.</button>
+  <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Prod.</button>
   <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
 </nav>
 
@@ -454,26 +468,11 @@ async function guardar(clave, valor){
 
 let ventas = [];
 let compras = [];
+let ingredientes = [];
+let productos = [];
+let semanasAbiertas = new Set();
 
-const RECETA_TORTA = [
-  {ing:'Birote (1/8 de tira de 8)', costo:4},
-  {ing:'Carne de cerdo (~83g)', costo:10},
-  {ing:'Jitomate (~83g)', costo:1.70},
-  {ing:'Puré de tomate (~83g)', costo:1.35},
-  {ing:'Crema', costo:1},
-  {ing:'Mayonesa', costo:2},
-  {ing:'Mostaza', costo:0.10},
-  {ing:'Cebolla', costo:0.20},
-  {ing:'Ajo', costo:0.10},
-  {ing:'Laurel', costo:0.04},
-  {ing:'Pimienta', costo:0.0083},
-  {ing:'Clavo', costo:0.0083},
-  {ing:'Sal', costo:0.025},
-];
-
-const CHOCOFLAN = { costoTotal:210, rebanadas:12, precioVenta:35, charolita:2.90, cucharita:0.30 };
-
-/* datos iniciales conocidos, solo se usan si aun no hay nada guardado */
+/* ---------- Datos semilla (solo si no hay nada guardado) ---------- */
 const VENTAS_SEMILLA = [
   {fecha:'2026-08-11', turno:'Tarde', producto:'Torta', cantidad:11, precio:30},
   {fecha:'2026-08-12', turno:'Mañana', producto:'Torta', cantidad:3, precio:30},
@@ -483,17 +482,72 @@ const VENTAS_SEMILLA = [
   {fecha:'2026-08-13', turno:'Tarde', producto:'Chocoflan', cantidad:7, precio:35},
   {fecha:'2026-08-14', turno:'Mañana', producto:'Torta', cantidad:7, precio:30},
   {fecha:'2026-08-14', turno:'Mañana', producto:'Chocoflan', cantidad:3, precio:35},
+  {fecha:'2026-08-14', turno:'Tarde', producto:'Torta', cantidad:4, precio:30},
+  {fecha:'2026-08-14', turno:'Tarde', producto:'Chocoflan', cantidad:1, precio:35},
 ];
 
-function hoyISO(){
-  const d = new Date();
-  return d.toISOString().slice(0,10);
-}
+const INGREDIENTES_SEMILLA = [
+  {nombre:'Birote (1/8 de tira de 8)', costo:4},
+  {nombre:'Carne de cerdo (~83g)', costo:10},
+  {nombre:'Jitomate (~83g)', costo:1.70},
+  {nombre:'Puré de tomate (~83g)', costo:1.35},
+  {nombre:'Crema', costo:1},
+  {nombre:'Mayonesa', costo:2},
+  {nombre:'Mostaza', costo:0.10},
+  {nombre:'Cebolla', costo:0.20},
+  {nombre:'Ajo', costo:0.10},
+  {nombre:'Laurel', costo:0.04},
+  {nombre:'Pimienta', costo:0.0083},
+  {nombre:'Clavo', costo:0.0083},
+  {nombre:'Sal', costo:0.025},
+];
+
+const PRODUCTOS_SEMILLA = [
+  {
+    id:'chocoflan',
+    nombre:'Chocoflan',
+    costoLote:210,
+    piezasLote:12,
+    precioVenta:35,
+    extras:[
+      {nombre:'Charolita', costo:2.90},
+      {nombre:'Cucharita', costo:0.30}
+    ]
+  }
+];
+
+function hoyISO(){ return new Date().toISOString().slice(0,10); }
 
 function fmtFecha(iso){
   const [y,m,d] = iso.split('-');
   const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   return `${parseInt(d)} ${meses[parseInt(m)-1]}`;
+}
+
+/* ISO week number + rango de fechas de esa semana */
+function semanaISO(iso){
+  const d = new Date(iso+'T00:00:00');
+  const dTmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (dTmp.getUTCDay() + 6) % 7;
+  dTmp.setUTCDate(dTmp.getUTCDate() - dayNum + 3);
+  const firstThursday = new Date(Date.UTC(dTmp.getUTCFullYear(),0,4));
+  const week = 1 + Math.round(((dTmp - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay()+6)%7)) / 7);
+  return {anio:dTmp.getUTCFullYear(), semana:week};
+}
+function lunesDeSemana(iso){
+  const d = new Date(iso+'T00:00:00');
+  const day = (d.getDay()+6)%7;
+  d.setDate(d.getDate()-day);
+  return d;
+}
+function viernesDeSemana(iso){
+  const l = lunesDeSemana(iso);
+  const v = new Date(l); v.setDate(v.getDate()+4);
+  return v;
+}
+function fmtRango(lun,vie){
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `${lun.getDate()} - ${vie.getDate()} ${meses[vie.getMonth()]}`;
 }
 
 /* ---------- Inicio ---------- */
@@ -503,45 +557,34 @@ async function init(){
   document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long', day:'numeric', month:'long'});
 
   ventas = await cargar('ventas', null);
-  if(ventas === null){
-    ventas = VENTAS_SEMILLA;
-    await guardar('ventas', ventas);
-  }
+  if(ventas === null){ ventas = VENTAS_SEMILLA; await guardar('ventas', ventas); }
+
   compras = await cargar('compras', []);
 
-  renderRecetaTorta();
-  renderRecetaChocoflan();
+  ingredientes = await cargar('ingredientes', null);
+  if(ingredientes === null){ ingredientes = INGREDIENTES_SEMILLA; await guardar('ingredientes', ingredientes); }
+
+  productos = await cargar('productos', null);
+  if(productos === null){ productos = PRODUCTOS_SEMILLA; await guardar('productos', productos); }
+
+  // abrir la semana mas reciente por default
+  if(ventas.length){
+    const masReciente = ventas.map(v=>v.fecha).sort().reverse()[0];
+    const {anio,semana} = semanaISO(masReciente);
+    semanasAbiertas.add(anio+'-'+semana);
+  }
+
+  poblarSelectProductoVenta();
+  renderIngredientes();
+  renderProductos();
   renderTodo();
 }
 
-function renderRecetaChocoflan(){
-  const cont = document.getElementById('recetaChocoflan');
-  const costoPza = CHOCOFLAN.costoTotal / CHOCOFLAN.rebanadas;
-  const costoTotalPza = costoPza + CHOCOFLAN.charolita + CHOCOFLAN.cucharita;
-  const ganancia = CHOCOFLAN.precioVenta - costoTotalPza;
-  cont.innerHTML = `
-    <div class="receta-item"><span>Chocoflan completo (12 rebanadas)</span><span>$${CHOCOFLAN.costoTotal.toFixed(2)}</span></div>
-    <div class="receta-item"><span>Costo del chocoflan por rebanada</span><span>$${costoPza.toFixed(2)}</span></div>
-    <div class="receta-item"><span>Charolita</span><span>$${CHOCOFLAN.charolita.toFixed(2)}</span></div>
-    <div class="receta-item"><span>Cucharita</span><span>$${CHOCOFLAN.cucharita.toFixed(2)}</span></div>
-    <div class="receta-total"><span>Costo total por rebanada</span><span>$${costoTotalPza.toFixed(2)}</span></div>
-    <div class="receta-item" style="margin-top:8px;"><span>Precio de venta</span><span>$${CHOCOFLAN.precioVenta.toFixed(2)}</span></div>
-    <div class="receta-item"><span>Ganancia por rebanada</span><span>$${ganancia.toFixed(2)}</span></div>
-  `;
-}
-
-function renderRecetaTorta(){
-  const cont = document.getElementById('recetaTorta');
-  let total = 0;
-  let html = '';
-  RECETA_TORTA.forEach(r=>{
-    total += r.costo;
-    html += `<div class="receta-item"><span>${r.ing}</span><span>$${r.costo.toFixed(2)}</span></div>`;
-  });
-  html += `<div class="receta-total"><span>Costo por torta</span><span>$${total.toFixed(2)}</span></div>`;
-  html += `<div class="receta-item" style="margin-top:8px;"><span>Precio de venta</span><span>$30.00</span></div>`;
-  html += `<div class="receta-item"><span>Ganancia por pieza</span><span>$${(30-total).toFixed(2)}</span></div>`;
-  cont.innerHTML = html;
+function poblarSelectProductoVenta(){
+  const sel = document.getElementById('v-producto');
+  const opciones = [{nombre:'Torta', precio: parseFloat(document.getElementById('ing-precio')?.value || 30)}]
+    .concat(productos.map(p=>({nombre:p.nombre, precio:p.precioVenta})));
+  sel.innerHTML = opciones.map(o=>`<option value="${o.nombre}" data-precio="${o.precio}">${o.nombre} ($${o.precio})</option>`).join('');
 }
 
 /* ---------- Navegación ---------- */
@@ -551,6 +594,7 @@ function cambiarVista(v){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('activo'));
   document.querySelectorAll(`.tab-btn[data-vista="${v}"]`).forEach(b=>b.classList.add('activo'));
   if(v==='resumen') dibujarGraficos();
+  if(v==='ventas') poblarSelectProductoVenta();
 }
 
 function toast(msg){
@@ -561,11 +605,10 @@ function toast(msg){
 }
 
 /* ---------- Ventas ---------- */
-document.getElementById('v-producto').addEventListener('change', function(){});
-
 async function agregarVenta(){
-  const producto = document.getElementById('v-producto').value;
-  const precio = parseFloat(document.getElementById('v-producto').selectedOptions[0].dataset.precio);
+  const sel = document.getElementById('v-producto');
+  const producto = sel.value;
+  const precio = parseFloat(sel.selectedOptions[0].dataset.precio) || 0;
   const turno = document.getElementById('v-turno').value;
   const cantidad = parseInt(document.getElementById('v-cantidad').value) || 0;
   const fecha = document.getElementById('v-fecha').value || hoyISO();
@@ -574,6 +617,10 @@ async function agregarVenta(){
   ventas.push({fecha, turno, producto, cantidad, precio});
   await guardar('ventas', ventas);
   document.getElementById('v-cantidad').value = 1;
+
+  const {anio,semana} = semanaISO(fecha);
+  semanasAbiertas.add(anio+'-'+semana);
+
   toast('Venta agregada ✓');
   renderTodo();
 }
@@ -584,22 +631,62 @@ async function borrarVenta(i){
   renderTodo();
 }
 
+function toggleSemana(clave){
+  if(semanasAbiertas.has(clave)) semanasAbiertas.delete(clave);
+  else semanasAbiertas.add(clave);
+  renderVentas();
+}
+
 function renderVentas(){
-  const lista = document.getElementById('listaVentas');
-  if(ventas.length===0){ lista.innerHTML = '<li class="vacio">Sin ventas registradas todavía</li>'; return; }
-  const ordenadas = ventas.map((v,i)=>({...v,i})).sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
-  lista.innerHTML = ordenadas.map(v=>`
-    <li>
-      <div class="izq">
-        <b>${v.producto} x${v.cantidad}</b>
-        <span>${fmtFecha(v.fecha)} · ${v.turno}</span>
-      </div>
-      <div class="der">
-        <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
-        <button class="del" onclick="borrarVenta(${v.i})">✕</button>
-      </div>
-    </li>
-  `).join('');
+  const cont = document.getElementById('listaSemanas');
+  if(ventas.length===0){ cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>'; }
+  else{
+    const grupos = {};
+    ventas.forEach((v,i)=>{
+      const {anio,semana} = semanaISO(v.fecha);
+      const clave = anio+'-'+semana;
+      if(!grupos[clave]) grupos[clave] = {anio, semana, items:[], lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha)};
+      grupos[clave].items.push({...v, i});
+    });
+    const claves = Object.keys(grupos).sort().reverse();
+    cont.innerHTML = claves.map(clave=>{
+      const g = grupos[clave];
+      const piezas = g.items.reduce((s,v)=>s+v.cantidad,0);
+      const ingreso = g.items.reduce((s,v)=>s+v.cantidad*v.precio,0);
+      const abierta = semanasAbiertas.has(clave);
+      const itemsOrdenados = g.items.slice().sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+      return `
+        <div class="semana ${abierta?'abierta':''}">
+          <div class="semana-header" onclick="toggleSemana('${clave}')">
+            <div class="titulo">Semana ${g.semana}
+              <small>${fmtRango(g.lun,g.vie)} · ${g.anio}</small>
+            </div>
+            <div class="resumen-mini">
+              <span class="pill">${piezas} pzas</span>
+              <span class="pill">$${ingreso.toLocaleString()}</span>
+              <span class="chevron">▶</span>
+            </div>
+          </div>
+          <div class="semana-body">
+            <ul class="lista">
+              ${itemsOrdenados.map(v=>`
+                <li>
+                  <div class="izq">
+                    <b>${v.producto} x${v.cantidad}</b>
+                    <span>${fmtFecha(v.fecha)} · ${v.turno}</span>
+                  </div>
+                  <div class="der">
+                    <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
+                    <button class="del" onclick="borrarVenta(${v.i})">✕</button>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 
   const hoy = hoyISO();
   const deHoy = ventas.filter(v=>v.fecha===hoy);
@@ -641,12 +728,171 @@ function renderCompras(){
         <span>${fmtFecha(c.fecha)}${c.cantidad?(' · '+c.cantidad):''}</span>
       </div>
       <div class="der">
-        <span class="pill" style="background:var(--crema-2);color:var(--cafe-suave);">$${c.costo.toLocaleString()}</span>
+        <span class="pill">$${c.costo.toLocaleString()}</span>
         <button class="del" onclick="borrarCompra(${c.i})">✕</button>
       </div>
     </li>
   `).join('');
   document.getElementById('totalCompras').textContent = '$'+compras.reduce((s,c)=>s+c.costo,0).toLocaleString();
+}
+
+/* ---------- Ingredientes / costeo de la torta ---------- */
+async function agregarIngrediente(){
+  ingredientes.push({nombre:'Nuevo ingrediente', costo:0});
+  await guardar('ingredientes', ingredientes);
+  renderIngredientes();
+}
+async function actualizarIngrediente(i, campo, valor){
+  if(campo==='costo') ingredientes[i].costo = parseFloat(valor)||0;
+  else ingredientes[i].nombre = valor;
+  await guardar('ingredientes', ingredientes);
+  renderTotalesIngredientes();
+}
+async function borrarIngrediente(i){
+  ingredientes.splice(i,1);
+  await guardar('ingredientes', ingredientes);
+  renderIngredientes();
+}
+
+function renderIngredientes(){
+  const cont = document.getElementById('listaIngredientes');
+  cont.innerHTML = ingredientes.map((ing,i)=>`
+    <div class="receta-item">
+      <input type="text" value="${ing.nombre}" onchange="actualizarIngrediente(${i},'nombre',this.value)">
+      <span>$</span>
+      <input type="number" step="0.01" value="${ing.costo}" onchange="actualizarIngrediente(${i},'costo',this.value)">
+      <button class="del" onclick="borrarIngrediente(${i})">✕</button>
+    </div>
+  `).join('');
+  renderTotalesIngredientes();
+  poblarSelectProductoVenta();
+}
+
+function renderTotalesIngredientes(){
+  const costoInsumos = ingredientes.reduce((s,ing)=>s+(ing.costo||0),0);
+  const precio = parseFloat(document.getElementById('ing-precio').value)||0;
+  const manoObra = parseFloat(document.getElementById('ing-manoobra').value)||0;
+  const indirectos = parseFloat(document.getElementById('ing-indirectos').value)||0;
+  const costoTotal = costoInsumos + manoObra + indirectos;
+  const margenBruto = precio - costoInsumos;
+  const margenNeto = precio - costoTotal;
+  const pctBruto = precio>0 ? (margenBruto/precio*100) : 0;
+  const pctNeto = precio>0 ? (margenNeto/precio*100) : 0;
+
+  document.getElementById('ing-costoInsumos').textContent = '$'+costoInsumos.toFixed(2);
+  document.getElementById('ing-costoTotal').textContent = '$'+costoTotal.toFixed(2);
+  const elB = document.getElementById('ing-margenBruto');
+  const elN = document.getElementById('ing-margenNeto');
+  elB.textContent = '$'+margenBruto.toFixed(2);
+  elB.className = 'num ' + (margenBruto>=0?'pos':'neg');
+  elN.textContent = '$'+margenNeto.toFixed(2);
+  elN.className = 'num ' + (margenNeto>=0?'pos':'neg');
+  document.getElementById('ing-pctBruto').textContent = pctBruto.toFixed(1)+'%';
+  document.getElementById('ing-pctNeto').textContent = pctNeto.toFixed(1)+'%';
+}
+
+/* ---------- Productos (chocoflan y nuevos) ---------- */
+async function agregarProducto(){
+  const nombre = prompt('Nombre del nuevo producto:');
+  if(!nombre) return;
+  productos.push({
+    id: 'prod_'+Date.now(),
+    nombre,
+    costoLote: 0,
+    piezasLote: 1,
+    precioVenta: 0,
+    extras: []
+  });
+  await guardar('productos', productos);
+  renderProductos();
+}
+async function actualizarProducto(idx, campo, valor){
+  if(campo==='nombre') productos[idx].nombre = valor;
+  else productos[idx][campo] = parseFloat(valor)||0;
+  await guardar('productos', productos);
+  renderProductos(idx);
+}
+async function borrarProducto(idx){
+  productos.splice(idx,1);
+  await guardar('productos', productos);
+  renderProductos();
+}
+async function agregarExtra(idx){
+  productos[idx].extras.push({nombre:'Empaque', costo:0});
+  await guardar('productos', productos);
+  renderProductos();
+}
+async function actualizarExtra(idx, exIdx, campo, valor){
+  if(campo==='costo') productos[idx].extras[exIdx].costo = parseFloat(valor)||0;
+  else productos[idx].extras[exIdx].nombre = valor;
+  await guardar('productos', productos);
+  renderProductos(idx);
+}
+async function borrarExtra(idx, exIdx){
+  productos[idx].extras.splice(exIdx,1);
+  await guardar('productos', productos);
+  renderProductos();
+}
+
+function renderProductos(){
+  const cont = document.getElementById('listaProductos');
+  if(productos.length===0){ cont.innerHTML = '<p class="vacio">Sin productos adicionales todavía</p>'; poblarSelectProductoVenta(); return; }
+
+  cont.innerHTML = productos.map((p,idx)=>{
+    const costoBase = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
+    const costoExtras = p.extras.reduce((s,e)=>s+(e.costo||0),0);
+    const costoTotal = costoBase + costoExtras;
+    const margenBruto = p.precioVenta - costoBase;
+    const margenNeto = p.precioVenta - costoTotal;
+    const pctBruto = p.precioVenta>0 ? (margenBruto/p.precioVenta*100) : 0;
+    const pctNeto = p.precioVenta>0 ? (margenNeto/p.precioVenta*100) : 0;
+
+    return `
+    <div class="producto-card">
+      <div class="encabezado">
+        <input type="text" value="${p.nombre}" onchange="actualizarProducto(${idx},'nombre',this.value)">
+        <button class="del" onclick="borrarProducto(${idx})">✕</button>
+      </div>
+
+      <div class="grid3">
+        <div>
+          <label>Costo del lote ($)</label>
+          <input type="number" step="0.01" value="${p.costoLote}" onchange="actualizarProducto(${idx},'costoLote',this.value)">
+        </div>
+        <div>
+          <label>Piezas por lote</label>
+          <input type="number" step="1" value="${p.piezasLote}" onchange="actualizarProducto(${idx},'piezasLote',this.value)">
+        </div>
+        <div>
+          <label>Precio de venta ($/pza)</label>
+          <input type="number" step="0.01" value="${p.precioVenta}" onchange="actualizarProducto(${idx},'precioVenta',this.value)">
+        </div>
+      </div>
+
+      <h3>Empaque / extras por pieza</h3>
+      ${p.extras.map((ex,exIdx)=>`
+        <div class="extra-row">
+          <input type="text" value="${ex.nombre}" onchange="actualizarExtra(${idx},${exIdx},'nombre',this.value)">
+          <span>$</span>
+          <input type="number" step="0.01" value="${ex.costo}" onchange="actualizarExtra(${idx},${exIdx},'costo',this.value)">
+          <button class="del" onclick="borrarExtra(${idx},${exIdx})">✕</button>
+        </div>
+      `).join('')}
+      <button class="btn secundario chico" style="margin-top:8px;" onclick="agregarExtra(${idx})">+ extra</button>
+
+      <div class="grid2" style="margin-top:14px;">
+        <div class="stat"><div class="num">$${costoBase.toFixed(2)}</div><div class="lbl">Costo base/pza</div></div>
+        <div class="stat"><div class="num">$${costoTotal.toFixed(2)}</div><div class="lbl">Costo total/pza</div></div>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <span class="margen-badge ${margenBruto<0?'neg':''}">Margen bruto $${margenBruto.toFixed(2)} · ${pctBruto.toFixed(1)}%</span>
+        <span class="margen-badge ${margenNeto<0?'neg':''}">Margen neto $${margenNeto.toFixed(2)} · ${pctNeto.toFixed(1)}%</span>
+      </div>
+    </div>
+    `;
+  }).join('');
+
+  poblarSelectProductoVenta();
 }
 
 /* ---------- Resumen ---------- */
@@ -672,37 +918,27 @@ function dibujarGraficos(){
   });
   const diasOrdenados = Object.keys(porDia).sort();
 
-  const paleta = {
-    salsa:'#C6362A', naranja:'#E8823A', naranjaClaro:'#F2A459', crema:'#FDEBD3', cafe:'#4A1F17'
-  };
+  const paleta = { salsa:'#C6362A', naranja:'#E8923A', naranjaClaro:'#F2A459', menta:'#7BAF97', cafe:'#1F4A42' };
 
   if(charts.dias) charts.dias.destroy();
   charts.dias = new Chart(document.getElementById('chartDias'), {
     type:'bar',
-    data:{
-      labels:diasOrdenados.map(fmtFecha),
-      datasets:[{ data:diasOrdenados.map(d=>porDia[d]), backgroundColor:paleta.salsa, borderRadius:6 }]
-    },
+    data:{ labels:diasOrdenados.map(fmtFecha), datasets:[{ data:diasOrdenados.map(d=>porDia[d]), backgroundColor:paleta.salsa, borderRadius:6 }] },
     options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:5}} } }
   });
 
   if(charts.turno) charts.turno.destroy();
   charts.turno = new Chart(document.getElementById('chartTurno'), {
     type:'doughnut',
-    data:{
-      labels:Object.keys(porTurno),
-      datasets:[{ data:Object.values(porTurno), backgroundColor:[paleta.naranjaClaro, paleta.salsa] }]
-    },
+    data:{ labels:Object.keys(porTurno), datasets:[{ data:Object.values(porTurno), backgroundColor:[paleta.naranjaClaro, paleta.salsa] }] },
     options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
   });
 
   if(charts.producto) charts.producto.destroy();
+  const coloresProd = [paleta.salsa, paleta.naranja, paleta.menta, paleta.cafe, paleta.naranjaClaro];
   charts.producto = new Chart(document.getElementById('chartProducto'), {
     type:'doughnut',
-    data:{
-      labels:Object.keys(porProducto),
-      datasets:[{ data:Object.values(porProducto), backgroundColor:[paleta.salsa, paleta.naranja, paleta.cafe] }]
-    },
+    data:{ labels:Object.keys(porProducto), datasets:[{ data:Object.values(porProducto), backgroundColor:coloresProd }] },
     options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
   });
 }
