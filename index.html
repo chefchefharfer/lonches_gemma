@@ -1,171 +1,423 @@
-/*
-  TORTAS GEMMA — Historial de Compras agrupado por semana + desglose por insumo
-  ================================================================================
-  Requisitos que cubre:
-  1. Agrupar el historial de compras por número de semana (con rango de fechas).
-  2. Al tocar un insumo (ej. "Jitomates saladet"), mostrar un desglose:
-     cantidad comprada + unidad, costo total, y costo por kg/unidad.
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Lonches Gemma — Compras</title>
 
-  SUPUESTO SOBRE TUS DATOS
-  ------------------------
-  Cada compra en Firestore/estado local se ve así (ajusta nombres de campo si
-  los tuyos difieren):
+<!-- Firebase (compat build, fácil de integrar sin bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-    {
-      id: "abc123",
-      insumo: "Jitomates saladet",
-      cantidad: 3.221,      // número, en la unidad de abajo
-      unidad: "kg",         // "kg" | "pza" | "L" | "g" ...
-      costoTotal: 64.41,
-      fecha: "2026-08-16"   // ISO string o Timestamp de Firestore
-    }
+<style>
+  :root{
+    --cream:#F4EEDD;
+    --card:#FBF7EC;
+    --green-dark:#2F5233;
+    --green-mint:#CFE8D8;
+    --green-mint-text:#1F5C33;
+    --orange-a:#C0392B;
+    --orange-b:#E08E2B;
+    --text:#333;
+    --muted:#8A8A80;
+    --border:#E7E0CC;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--cream);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color:var(--text);
+    padding-bottom:90px;
+  }
+  h1.page-title{
+    font-family:Georgia, "Times New Roman", serif;
+    color:var(--green-dark);
+    font-size:1.5rem;
+    margin:0;
+    padding:20px 20px 4px;
+  }
 
-  Si tu formulario actual NO guarda "unidad" como campo separado (por el
-  placeholder "Cantidad (kg, pza, L)" parece que solo se captura un número),
-  necesitas agregar un <select> de unidad al formulario de "Registrar compra"
-  para que el cálculo de costo por kg/unidad sea correcto. Sin la unidad no
-  se puede saber si "3.221" son kg o piezas.
-*/
+  .card{
+    background:var(--card);
+    border-radius:18px;
+    margin:14px 16px;
+    padding:20px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.04);
+  }
 
-// ---------------------------------------------------------------------------
-// 1) NÚMERO DE SEMANA
-// ---------------------------------------------------------------------------
-// Semana ISO 8601 (lunes a domingo) + año, para agrupar y ordenar.
-function getWeekInfo(fecha) {
-  const d = new Date(fecha);
-  // Copia a UTC para evitar desfases de zona horaria
+  label{
+    display:block;
+    font-family:Georgia, serif;
+    color:var(--green-dark);
+    font-weight:600;
+    margin-bottom:8px;
+    font-size:1rem;
+  }
+  input, select{
+    width:100%;
+    padding:14px 16px;
+    border-radius:14px;
+    border:1px solid var(--border);
+    background:#fff;
+    font-size:1rem;
+    color:var(--text);
+  }
+  .row-2{
+    display:flex;
+    gap:12px;
+    margin-top:16px;
+  }
+  .row-2 > div{flex:1;}
+
+  .field{margin-top:16px;}
+  .field:first-of-type{margin-top:0;}
+
+  button.primary{
+    width:100%;
+    margin-top:20px;
+    border:none;
+    padding:16px;
+    border-radius:14px;
+    font-size:1.05rem;
+    font-weight:700;
+    color:#fff;
+    background:linear-gradient(90deg, var(--orange-a), var(--orange-b));
+    cursor:pointer;
+  }
+  button.primary:active{opacity:0.85;}
+
+  .card h2{
+    font-family:Georgia, serif;
+    color:var(--green-dark);
+    font-size:1.3rem;
+    margin:0 0 12px;
+  }
+
+  .total-box{
+    background:var(--green-mint);
+    border-radius:14px;
+    padding:22px;
+    text-align:center;
+  }
+  .total-box .amount{
+    color:#7A2E24;
+    font-family:Georgia, serif;
+    font-size:2.2rem;
+    font-weight:700;
+  }
+  .total-box .label{
+    color:#5c5c52;
+    letter-spacing:0.08em;
+    font-size:0.8rem;
+    margin-top:4px;
+  }
+
+  /* ---- Historial agrupado por semana ---- */
+  .week-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin:18px 0 8px;
+  }
+  .week-header:first-of-type{margin-top:0;}
+  .week-header h3{
+    margin:0;
+    font-family:Georgia, serif;
+    color:var(--green-dark);
+    font-size:1rem;
+  }
+  .week-header .week-total{
+    font-weight:700;
+    color:var(--green-dark);
+    font-size:0.95rem;
+  }
+
+  .purchase-row{
+    border-bottom:1px solid var(--border);
+    padding:12px 0;
+  }
+  .purchase-row:last-child{border-bottom:none;}
+
+  .purchase-main{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    cursor:pointer;
+  }
+  .purchase-name{font-weight:600;}
+  .purchase-date{font-size:0.8rem;color:var(--muted); margin-top:2px;}
+  .purchase-cost{
+    background:var(--green-mint);
+    color:var(--green-mint-text);
+    font-weight:700;
+    padding:5px 12px;
+    border-radius:999px;
+    font-size:0.9rem;
+    white-space:nowrap;
+  }
+  .chevron{
+    display:inline-block;
+    margin-left:8px;
+    transition:transform 0.15s ease;
+    color:var(--muted);
+  }
+  .purchase-row.open .chevron{transform:rotate(90deg);}
+
+  .purchase-detail{
+    display:none;
+    margin-top:10px;
+    padding:12px 14px;
+    background:#fff;
+    border-radius:12px;
+    font-size:0.9rem;
+    line-height:1.7;
+  }
+  .purchase-row.open .purchase-detail{display:block;}
+  .purchase-detail strong{color:var(--green-dark);}
+  .delete-btn{
+    color:#B23A2E;
+    background:none;
+    border:none;
+    font-size:1.1rem;
+    cursor:pointer;
+    padding:0 0 0 10px;
+  }
+
+  .empty-state{
+    color:var(--muted);
+    text-align:center;
+    padding:20px 0;
+    font-size:0.9rem;
+  }
+
+  /* ---- nav inferior ---- */
+  nav.tabbar{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    background:#fff;
+    border-top:1px solid var(--border);
+    display:flex;
+    padding:10px 0 max(10px, env(safe-area-inset-bottom));
+  }
+  nav.tabbar a{
+    flex:1;
+    text-align:center;
+    text-decoration:none;
+    color:var(--muted);
+    font-size:0.75rem;
+  }
+  nav.tabbar a.active{color:var(--orange-a); font-weight:700;}
+  nav.tabbar .icon{font-size:1.3rem; display:block;}
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Lonches Gemma</h1>
+
+<div class="card">
+  <h2>Registrar compra / insumo</h2>
+
+  <div class="field">
+    <label for="insumo">Insumo</label>
+    <input id="insumo" type="text" placeholder="Ej. Carne de cerdo" />
+  </div>
+
+  <div class="row-2">
+    <div>
+      <label for="cantidad">Cantidad</label>
+      <input id="cantidad" type="number" step="any" placeholder="1" />
+    </div>
+    <div>
+      <label for="unidad">Unidad</label>
+      <select id="unidad">
+        <option value="kg">kg</option>
+        <option value="g">g</option>
+        <option value="L">L</option>
+        <option value="pza">pza</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="costo">Costo total ($)</label>
+    <input id="costo" type="number" step="any" placeholder="122" />
+  </div>
+
+  <div class="field">
+    <label for="fecha">Fecha</label>
+    <input id="fecha" type="date" />
+  </div>
+
+  <button class="primary" id="btnAgregar">+ Agregar compra</button>
+</div>
+
+<div class="card">
+  <h2>Gasto total en compras</h2>
+  <div class="total-box">
+    <div class="amount" id="gastoTotal">$0.00</div>
+    <div class="label">ACUMULADO</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Historial de compras</h2>
+  <div id="historial">
+    <div class="empty-state">Aún no hay compras registradas.</div>
+  </div>
+</div>
+
+<nav class="tabbar">
+  <a href="#" class="active"><span class="icon">🧾</span>Compras</a>
+  <a href="#"><span class="icon">💰</span>Ventas</a>
+  <a href="#"><span class="icon">🥬</span>Ingr.</a>
+  <a href="#"><span class="icon">🍮</span>Prod.</a>
+  <a href="#"><span class="icon">📊</span>Resumen</a>
+</nav>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN FIREBASE — reemplaza con tu config real del
+   proyecto "lonches-gemma" (Firebase console > Configuración
+   del proyecto > tus apps > SDK setup and configuration)
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "lonches-gemma.firebaseapp.com",
+  projectId: "lonches-gemma",
+  storageBucket: "lonches-gemma.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const comprasRef = db.collection("compras");
+
+// Fecha de hoy por default en el input
+document.getElementById("fecha").valueAsDate = new Date();
+
+// --------------------------------------------------------------
+// Número de semana ISO (lunes-domingo) + etiqueta con rango
+// --------------------------------------------------------------
+function getWeekInfo(fechaISO) {
+  const d = new Date(fechaISO + "T00:00:00");
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = (date.getUTCDay() + 6) % 7; // lunes = 0
-  date.setUTCDate(date.getUTCDate() - dayNum + 3); // jueves de esa semana
+  const dayNum = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - dayNum + 3);
   const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
-  const weekNumber =
-    1 +
-    Math.round(
-      ((date - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7
-    );
+  const weekNumber = 1 + Math.round(
+    ((date - firstThursday) / 86400000 - 3 + ((firstThursday.getUTCDay() + 6) % 7)) / 7
+  );
 
-  // Rango lunes-domingo para mostrar en el encabezado
   const monday = new Date(d);
   monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-
   const fmt = (x) => x.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 
   return {
-    year: date.getUTCFullYear(),
-    week: weekNumber,
-    label: `Semana ${weekNumber} (${fmt(monday)} - ${fmt(sunday)})`,
     key: `${date.getUTCFullYear()}-W${String(weekNumber).padStart(2, "0")}`,
+    label: `Semana ${weekNumber} (${fmt(monday)} - ${fmt(sunday)})`
   };
 }
 
-// ---------------------------------------------------------------------------
-// 2) AGRUPAR COMPRAS POR SEMANA
-// ---------------------------------------------------------------------------
-function groupPurchasesByWeek(purchases) {
+function groupByWeek(compras) {
   const groups = new Map();
-
-  for (const p of purchases) {
-    const { key, label } = getWeekInfo(p.fecha);
-    if (!groups.has(key)) {
-      groups.set(key, { key, label, items: [], total: 0 });
-    }
+  for (const c of compras) {
+    const { key, label } = getWeekInfo(c.fecha);
+    if (!groups.has(key)) groups.set(key, { key, label, items: [], total: 0 });
     const g = groups.get(key);
-    g.items.push(p);
-    g.total += Number(p.costoTotal || 0);
+    g.items.push(c);
+    g.total += Number(c.costo || 0);
   }
-
-  // Más reciente primero
   return Array.from(groups.values()).sort((a, b) => (a.key < b.key ? 1 : -1));
 }
 
-// ---------------------------------------------------------------------------
-// 3) COSTO POR KG / UNIDAD
-// ---------------------------------------------------------------------------
-function unitCost(p) {
-  const cantidad = Number(p.cantidad || 0);
-  if (!cantidad) return null;
-  return Number(p.costoTotal || 0) / cantidad;
+function unitCost(c) {
+  const cantidad = Number(c.cantidad || 0);
+  if (!cantidad) return "N/D";
+  return `$${(Number(c.costo) / cantidad).toFixed(2)} / ${c.unidad}`;
 }
 
-function formatUnitCost(p) {
-  const uc = unitCost(p);
-  if (uc === null) return "N/D";
-  const unidad = p.unidad || "unidad";
-  return `$${uc.toFixed(2)} / ${unidad}`;
-}
+function render(compras) {
+  const historial = document.getElementById("historial");
+  const gastoTotal = compras.reduce((s, c) => s + Number(c.costo || 0), 0);
+  document.getElementById("gastoTotal").textContent =
+    "$" + gastoTotal.toFixed(2);
 
-// ---------------------------------------------------------------------------
-// 4) RENDER — historial agrupado + fila expandible con desglose
-// ---------------------------------------------------------------------------
-// Vanilla JS, sin dependencias. Reemplaza tu render actual de "Historial de
-// compras" por esta función, pasándole el arreglo de compras ya cargado.
-function renderPurchaseHistory(container, purchases) {
-  container.innerHTML = "";
-  const weeks = groupPurchasesByWeek(purchases);
+  if (!compras.length) {
+    historial.innerHTML = '<div class="empty-state">Aún no hay compras registradas.</div>';
+    return;
+  }
 
-  for (const week of weeks) {
-    const weekHeader = document.createElement("div");
-    weekHeader.className = "week-header";
-    weekHeader.innerHTML = `
+  const weeks = groupByWeek(compras);
+  historial.innerHTML = weeks.map(week => `
+    <div class="week-header">
       <h3>${week.label}</h3>
       <span class="week-total">$${week.total.toFixed(2)}</span>
-    `;
-    container.appendChild(weekHeader);
-
-    for (const p of week.items) {
-      const row = document.createElement("div");
-      row.className = "purchase-row";
-      row.innerHTML = `
+    </div>
+    ${week.items.map(c => `
+      <div class="purchase-row" data-id="${c.id}">
         <div class="purchase-main">
           <div>
-            <strong>${p.insumo}</strong>
-            <div class="purchase-date">${new Date(p.fecha).toLocaleDateString("es-MX")}</div>
+            <div class="purchase-name">${c.insumo} <span class="chevron">›</span></div>
+            <div class="purchase-date">${new Date(c.fecha + "T00:00:00").toLocaleDateString("es-MX")}</div>
           </div>
-          <span class="purchase-cost">$${Number(p.costoTotal).toFixed(2)}</span>
+          <div style="display:flex;align-items:center;">
+            <span class="purchase-cost">$${Number(c.costo).toFixed(2)}</span>
+            <button class="delete-btn" data-del="${c.id}">✕</button>
+          </div>
         </div>
-        <div class="purchase-detail" hidden>
-          <div>Cantidad comprada: <strong>${p.cantidad} ${p.unidad || ""}</strong></div>
-          <div>Costo total: <strong>$${Number(p.costoTotal).toFixed(2)}</strong></div>
-          <div>Costo por ${p.unidad || "unidad"}: <strong>${formatUnitCost(p)}</strong></div>
+        <div class="purchase-detail">
+          Cantidad comprada: <strong>${c.cantidad} ${c.unidad}</strong><br/>
+          Costo total: <strong>$${Number(c.costo).toFixed(2)}</strong><br/>
+          Costo por ${c.unidad}: <strong>${unitCost(c)}</strong>
         </div>
-      `;
+      </div>
+    `).join("")}
+  `).join("");
 
-      // Tocar la fila muestra/oculta el desglose
-      row.querySelector(".purchase-main").addEventListener("click", () => {
-        const detail = row.querySelector(".purchase-detail");
-        detail.hidden = !detail.hidden;
-      });
+  // Tocar una fila expande/colapsa el desglose
+  historial.querySelectorAll(".purchase-main").forEach(main => {
+    main.addEventListener("click", () => {
+      main.closest(".purchase-row").classList.toggle("open");
+    });
+  });
 
-      container.appendChild(row);
-    }
-  }
+  // Botón de borrar
+  historial.querySelectorAll(".delete-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      comprasRef.doc(btn.dataset.del).delete();
+    });
+  });
 }
 
-/*
-  CSS sugerido (ajústalo a tu paleta actual: verde oscuro / beige / naranja)
-  ---------------------------------------------------------------------------
-  .week-header { display:flex; justify-content:space-between; align-items:center;
-    margin: 16px 0 6px; padding: 4px 8px; }
-  .week-header h3 { margin:0; font-size: 1rem; color:#2F5233; }
-  .week-total { font-weight:bold; color:#2F5233; }
+// Escucha en tiempo real los cambios en Firestore
+comprasRef.orderBy("fecha", "desc").onSnapshot(snapshot => {
+  const compras = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  render(compras);
+});
 
-  .purchase-row { background:#fff; border-radius:10px; margin-bottom:8px;
-    overflow:hidden; }
-  .purchase-main { display:flex; justify-content:space-between; align-items:center;
-    padding:14px; cursor:pointer; }
-  .purchase-date { font-size:0.8rem; color:#888; }
-  .purchase-cost { background:#cfe8d8; color:#1f5c33; padding:4px 10px;
-    border-radius:20px; font-weight:600; }
-  .purchase-detail { padding: 0 14px 14px; font-size:0.9rem; color:#444;
-    border-top:1px solid #eee; }
-  .purchase-detail div { margin-top:6px; }
+// Agregar nueva compra
+document.getElementById("btnAgregar").addEventListener("click", () => {
+  const insumo = document.getElementById("insumo").value.trim();
+  const cantidad = parseFloat(document.getElementById("cantidad").value);
+  const unidad = document.getElementById("unidad").value;
+  const costo = parseFloat(document.getElementById("costo").value);
+  const fecha = document.getElementById("fecha").value;
 
-  USO
-  ---
-  const container = document.getElementById("historial-compras");
-  renderPurchaseHistory(container, listaDeComprasDesdeFirestore);
-*/
+  if (!insumo || !cantidad || !costo || !fecha) {
+    alert("Completa insumo, cantidad, costo y fecha.");
+    return;
+  }
 
-export { getWeekInfo, groupPurchasesByWeek, unitCost, formatUnitCost, renderPurchaseHistory };
+  comprasRef.add({ insumo, cantidad, unidad, costo, fecha }).then(() => {
+    document.getElementById("insumo").value = "";
+    document.getElementById("cantidad").value = "";
+    document.getElementById("costo").value = "";
+  });
+});
+</script>
+</body>
+</html>
