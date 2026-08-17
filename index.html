@@ -223,6 +223,11 @@
   }
   .margen-badge.neg{background:var(--rojo-bg); color:var(--rojo-neg);}
 
+  .conteo-producto{border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-top:10px;}
+  .conteo-nombre{font-weight:700; font-size:14px; display:flex; justify-content:space-between; align-items:baseline;}
+  .conteo-precio{font-weight:500; font-size:11.5px; color:var(--text-2);}
+  .conteo-resumen{margin-top:8px; font-size:12.5px; font-weight:700; color:var(--verde);}
+
   nav.tabs{
     position:fixed; bottom:0; left:0; right:0;
     background:#fff;
@@ -334,38 +339,39 @@
       <!-- VENTAS -->
       <section id="vista-ventas" class="vista activa">
         <div class="card">
-          <h2>Registrar venta</h2>
-          <label>Producto</label>
-          <select id="v-producto"></select>
+          <h2>Registrar turno</h2>
+          <p class="sub">Anota cuánto llevaste de cada producto; al final del turno pon lo que sobró y lo que regalaste de cortesía — lo vendido se calcula solo</p>
           <div class="grid2">
             <div>
               <label>Turno</label>
-              <select id="v-turno">
+              <select id="t-turno">
                 <option value="Mañana">Mañana</option>
                 <option value="Tarde">Tarde</option>
               </select>
             </div>
             <div>
-              <label>Cantidad</label>
-              <input type="number" id="v-cantidad" min="1" value="1">
+              <label>Fecha</label>
+              <input type="date" id="t-fecha">
             </div>
           </div>
-          <label>Fecha</label>
-          <input type="date" id="v-fecha">
-          <button class="btn" onclick="agregarVenta()">+ Agregar venta</button>
+
+          <div id="listaConteoProductos"></div>
+
+          <button class="btn" onclick="registrarTurno()">+ Registrar turno</button>
         </div>
 
         <div class="card">
           <h2>Hoy</h2>
-          <div class="grid2">
+          <div class="grid3">
             <div class="stat"><div class="num" id="hoyPiezas">0</div><div class="lbl">Piezas hoy</div></div>
             <div class="stat"><div class="num" id="hoyIngreso">$0</div><div class="lbl">Ingreso hoy</div></div>
+            <div class="stat"><div class="num" id="hoyCortesias">0</div><div class="lbl">Cortesías hoy</div></div>
           </div>
         </div>
 
         <div class="card">
           <h2>Historial de ventas por semana</h2>
-          <p class="sub">Toca una semana para desplegarla</p>
+          <p class="sub">Toca una semana para desplegarla; toca una venta para ver su desglose</p>
           <div id="listaSemanas"></div>
         </div>
       </section>
@@ -540,6 +546,7 @@ let compras = [];
 let ingredientes = [];
 let productos = [];
 let semanasAbiertas = new Set();
+let detalleVentasAbiertos = new Set();
 let semanasComprasAbiertas = new Set();
 let detalleComprasAbiertos = new Set();
 
@@ -623,7 +630,7 @@ function fmtRango(lun,vie){
 
 /* ---------- Inicio ---------- */
 async function init(){
-  document.getElementById('v-fecha').value = hoyISO();
+  document.getElementById('t-fecha').value = hoyISO();
   document.getElementById('c-fecha').value = hoyISO();
   document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long', day:'numeric', month:'long'});
 
@@ -639,6 +646,31 @@ async function init(){
       return v;
     });
     if(migrado) await guardar('ventas', ventas);
+  }
+
+  // Consolidar las ventas de HOY capturadas con el método anterior (una por
+  // una) en una sola entrada por turno/producto con el nuevo formato
+  // (llevadas/sobrantes/cortesías), asumiendo que no hubo sobrantes ni
+  // cortesía registrada en esas ventas individuales.
+  {
+    const hoy = hoyISO();
+    const deHoyViejas = ventas.filter(v => v.fecha === hoy && v.llevadas === undefined);
+    if(deHoyViejas.length){
+      const otras = ventas.filter(v => !(v.fecha === hoy && v.llevadas === undefined));
+      const grupos = {};
+      deHoyViejas.forEach(v=>{
+        const clave = v.turno + '|' + v.producto;
+        if(!grupos[clave]) grupos[clave] = {fecha:hoy, turno:v.turno, producto:v.producto, cantidad:0, precio:v.precio};
+        grupos[clave].cantidad += v.cantidad;
+      });
+      const consolidadas = Object.values(grupos).map(g => ({
+        fecha:g.fecha, turno:g.turno, producto:g.producto,
+        llevadas:g.cantidad, sobrantes:0, cortesias:0,
+        cantidad:g.cantidad, precio:g.precio
+      }));
+      ventas = [...otras, ...consolidadas];
+      await guardar('ventas', ventas);
+    }
   }
 
   compras = await cargar('compras', []);
@@ -661,17 +693,54 @@ async function init(){
     semanasComprasAbiertas.add(anio+'-'+semana);
   }
 
-  poblarSelectProductoVenta();
+  renderConteoProductos();
   renderIngredientes();
   renderProductos();
   renderTodo();
 }
 
-function poblarSelectProductoVenta(){
-  const sel = document.getElementById('v-producto');
-  const opciones = [{nombre:'Lonche', precio: parseFloat(document.getElementById('ing-precio')?.value || 30)}]
+function productosVendibles(){
+  return [{nombre:'Lonche', precio: parseFloat(document.getElementById('ing-precio')?.value || 30)}]
     .concat(productos.map(p=>({nombre:p.nombre, precio:p.precioVenta})));
-  sel.innerHTML = opciones.map(o=>`<option value="${o.nombre}" data-precio="${o.precio}">${o.nombre} ($${o.precio})</option>`).join('');
+}
+
+function renderConteoProductos(){
+  const cont = document.getElementById('listaConteoProductos');
+  if(!cont) return;
+  const lista = productosVendibles();
+  cont.innerHTML = lista.map((p,idx)=>`
+    <div class="conteo-producto">
+      <div class="conteo-nombre">${p.nombre} <span class="conteo-precio">$${p.precio}/pza</span></div>
+      <div class="grid3">
+        <div>
+          <label>Llevaste</label>
+          <input type="number" min="0" id="t-llevaste-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
+        </div>
+        <div>
+          <label>Sobraron</label>
+          <input type="number" min="0" id="t-sobraron-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
+        </div>
+        <div>
+          <label>Cortesía</label>
+          <input type="number" min="0" id="t-cortesia-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
+        </div>
+      </div>
+      <div class="conteo-resumen" id="t-resumen-${idx}">Vendiste: 0 · $0</div>
+    </div>
+  `).join('');
+  lista.forEach((p,idx)=>actualizarResumenConteo(idx));
+}
+
+function actualizarResumenConteo(idx){
+  const lista = productosVendibles();
+  const p = lista[idx];
+  if(!p) return;
+  const llevaste = parseInt(document.getElementById(`t-llevaste-${idx}`).value)||0;
+  const sobraron = parseInt(document.getElementById(`t-sobraron-${idx}`).value)||0;
+  const cortesia = parseInt(document.getElementById(`t-cortesia-${idx}`).value)||0;
+  let vendiste = llevaste - sobraron - cortesia;
+  if(vendiste < 0) vendiste = 0;
+  document.getElementById(`t-resumen-${idx}`).textContent = `Vendiste: ${vendiste} · $${(vendiste*p.precio).toLocaleString()}`;
 }
 
 /* ---------- Navegación ---------- */
@@ -681,7 +750,7 @@ function cambiarVista(v){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('activo'));
   document.querySelectorAll(`.tab-btn[data-vista="${v}"]`).forEach(b=>b.classList.add('activo'));
   if(v==='resumen') dibujarGraficos();
-  if(v==='ventas') poblarSelectProductoVenta();
+  if(v==='ventas') renderConteoProductos();
 }
 
 function toast(msg){
@@ -692,23 +761,42 @@ function toast(msg){
 }
 
 /* ---------- Ventas ---------- */
-async function agregarVenta(){
-  const sel = document.getElementById('v-producto');
-  const producto = sel.value;
-  const precio = parseFloat(sel.selectedOptions[0].dataset.precio) || 0;
-  const turno = document.getElementById('v-turno').value;
-  const cantidad = parseInt(document.getElementById('v-cantidad').value) || 0;
-  const fecha = document.getElementById('v-fecha').value || hoyISO();
-  if(cantidad <= 0){ toast('Pon una cantidad válida'); return; }
+async function registrarTurno(){
+  const turno = document.getElementById('t-turno').value;
+  const fecha = document.getElementById('t-fecha').value || hoyISO();
+  const lista = productosVendibles();
+  let algo = false;
 
-  ventas.push({fecha, turno, producto, cantidad, precio});
+  lista.forEach((p,idx)=>{
+    const llevaste = parseInt(document.getElementById(`t-llevaste-${idx}`).value)||0;
+    if(llevaste <= 0) return;
+    const sobraron = parseInt(document.getElementById(`t-sobraron-${idx}`).value)||0;
+    const cortesia = parseInt(document.getElementById(`t-cortesia-${idx}`).value)||0;
+    let vendiste = llevaste - sobraron - cortesia;
+    if(vendiste < 0) vendiste = 0;
+    algo = true;
+    ventas.push({
+      fecha, turno, producto:p.nombre,
+      llevadas:llevaste, sobrantes:sobraron, cortesias:cortesia,
+      cantidad:vendiste, precio:p.precio
+    });
+  });
+
+  if(!algo){ toast('Pon cuántas piezas llevaste de al menos un producto'); return; }
+
   await guardar('ventas', ventas);
-  document.getElementById('v-cantidad').value = 1;
+
+  lista.forEach((p,idx)=>{
+    document.getElementById(`t-llevaste-${idx}`).value = 0;
+    document.getElementById(`t-sobraron-${idx}`).value = 0;
+    document.getElementById(`t-cortesia-${idx}`).value = 0;
+    actualizarResumenConteo(idx);
+  });
 
   const {anio,semana} = semanaISO(fecha);
   semanasAbiertas.add(anio+'-'+semana);
 
-  toast('Venta agregada ✓');
+  toast('Turno registrado ✓');
   renderTodo();
 }
 
@@ -721,6 +809,12 @@ async function borrarVenta(i){
 function toggleSemana(clave){
   if(semanasAbiertas.has(clave)) semanasAbiertas.delete(clave);
   else semanasAbiertas.add(clave);
+  renderVentas();
+}
+
+function toggleDetalleVenta(i){
+  if(detalleVentasAbiertos.has(i)) detalleVentasAbiertos.delete(i);
+  else detalleVentasAbiertos.add(i);
   renderVentas();
 }
 
@@ -756,18 +850,30 @@ function renderVentas(){
           </div>
           <div class="semana-body">
             <ul class="lista">
-              ${itemsOrdenados.map(v=>`
+              ${itemsOrdenados.map(v=>{
+                const detalleAbierto = detalleVentasAbiertos.has(v.i);
+                return `
                 <li>
-                  <div class="izq">
-                    <b>${v.producto} x${v.cantidad}</b>
-                    <span>${fmtFecha(v.fecha)} · ${v.turno}</span>
-                  </div>
-                  <div class="der">
-                    <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
-                    <button class="del" onclick="borrarVenta(${v.i})">✕</button>
+                  <div style="width:100%">
+                    <div class="item-fila" onclick="toggleDetalleVenta(${v.i})">
+                      <div class="izq">
+                        <b>${v.producto} x${v.cantidad}</b>
+                        <span>${fmtFecha(v.fecha)} · ${v.turno}</span>
+                      </div>
+                      <div class="der">
+                        <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
+                        <button class="del" onclick="event.stopPropagation(); borrarVenta(${v.i})">✕</button>
+                      </div>
+                    </div>
+                    ${detalleAbierto ? `
+                      <div class="item-detalle">
+                        ${v.llevadas!==undefined ? `Llevaste: <b>${v.llevadas}</b> · Sobraron: <b>${v.sobrantes||0}</b> · Cortesía: <b>${v.cortesias||0}</b><br>` : ''}
+                        Vendiste: <b>${v.cantidad}</b> · Precio unitario: <b>$${v.precio}</b> · Total: <b>$${(v.cantidad*v.precio).toLocaleString()}</b>
+                      </div>
+                    ` : ''}
                   </div>
                 </li>
-              `).join('')}
+              `}).join('')}
             </ul>
           </div>
         </div>
@@ -779,6 +885,7 @@ function renderVentas(){
   const deHoy = ventas.filter(v=>v.fecha===hoy);
   document.getElementById('hoyPiezas').textContent = deHoy.reduce((s,v)=>s+v.cantidad,0);
   document.getElementById('hoyIngreso').textContent = '$'+deHoy.reduce((s,v)=>s+v.cantidad*v.precio,0).toLocaleString();
+  document.getElementById('hoyCortesias').textContent = deHoy.reduce((s,v)=>s+(v.cortesias||0),0);
 }
 
 /* ---------- Compras ---------- */
@@ -916,7 +1023,7 @@ function renderIngredientes(){
     </div>
   `).join('');
   renderTotalesIngredientes();
-  poblarSelectProductoVenta();
+  renderConteoProductos();
 }
 
 function renderTotalesIngredientes(){
@@ -987,7 +1094,7 @@ async function borrarExtra(idx, exIdx){
 
 function renderProductos(){
   const cont = document.getElementById('listaProductos');
-  if(productos.length===0){ cont.innerHTML = '<p class="vacio">Sin productos adicionales todavía</p>'; poblarSelectProductoVenta(); return; }
+  if(productos.length===0){ cont.innerHTML = '<p class="vacio">Sin productos adicionales todavía</p>'; renderConteoProductos(); return; }
 
   cont.innerHTML = productos.map((p,idx)=>{
     const costoBase = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
@@ -1043,7 +1150,7 @@ function renderProductos(){
     `;
   }).join('');
 
-  poblarSelectProductoVenta();
+  renderConteoProductos();
 }
 
 /* ---------- Resumen ---------- */
