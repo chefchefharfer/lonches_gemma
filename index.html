@@ -196,9 +196,9 @@
   .semana-header .titulo small{display:block; font-weight:500; font-size:11px; color:var(--text-2); margin-top:1px;}
   .semana-header .resumen-mini{display:flex; align-items:center; gap:8px;}
   .semana-header .chevron{transition:transform 0.2s; font-size:13px; color:var(--text-2);}
-  .semana.abierta .chevron{transform:rotate(90deg);}
+  .semana.abierta > .semana-header .chevron{transform:rotate(90deg);}
   .semana-body{max-height:0; overflow:hidden; transition:max-height 0.25s ease;}
-  .semana.abierta .semana-body{max-height:2000px;}
+  .semana.abierta > .semana-body{max-height:6000px;}
   .semana-body ul.lista{padding:0 14px; margin:0;}
   .semana-body ul.lista li{font-size:12.5px;}
 
@@ -208,6 +208,41 @@
     border-top:1px dashed var(--border); margin-top:6px; line-height:1.7;
   }
   .item-detalle b{color:var(--text);}
+
+  .dia-block{border-top:1px solid var(--border);}
+  .dia-block:first-child{border-top:none;}
+  .dia-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; background:#fff; cursor:pointer;
+  }
+  .dia-header:hover{background:var(--bg);}
+  .dia-titulo{font-size:12.5px; font-weight:700; color:var(--text); text-transform:capitalize;}
+  .dia-header .chevron{transition:transform 0.2s; font-size:12px; color:var(--text-2);}
+  .dia-block.abierta > .dia-header .chevron{transform:rotate(90deg);}
+  .dia-body{max-height:0; overflow:hidden; transition:max-height 0.25s ease; background:#FAFBFA;}
+  .dia-block.abierta > .dia-body{max-height:4000px;}
+
+  .prod-resumen{padding:8px 14px; background:#F1F3F1; border-bottom:1px solid var(--border);}
+  .prod-resumen-row{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; padding:3px 0; gap:8px;}
+  .prod-resumen-row .prod-nombre{font-weight:600; color:var(--text);}
+  .prod-resumen-row .prod-datos{color:var(--text-2); text-align:right;}
+  .prod-resumen-row .prod-datos b{color:var(--text);}
+  .prod-resumen-total{border-top:1px solid var(--border); margin-top:4px; padding-top:6px;}
+  .prod-resumen-total span{font-weight:700; color:var(--text); font-size:12.5px;}
+
+  .turno-block{border-top:1px dashed var(--border);}
+  .turno-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 14px 8px 24px; cursor:pointer;
+  }
+  .turno-header:hover{background:var(--chip-bg);}
+  .turno-titulo{font-size:12px; font-weight:600; color:var(--text-2);}
+  .turno-header .chevron{transition:transform 0.2s; font-size:11px; color:var(--text-2);}
+  .turno-block.abierta > .turno-header .chevron{transform:rotate(90deg);}
+  .turno-body{max-height:0; overflow:hidden; transition:max-height 0.25s ease;}
+  .turno-block.abierta > .turno-body{max-height:3000px;}
+  .turno-body ul.lista{padding:0 14px 0 28px; margin:0;}
+  .turno-body ul.lista li{font-size:12.5px;}
 
   /* Productos configurables */
   .producto-card{border:1.5px solid var(--border); border-radius:10px; padding:14px; margin-bottom:12px; background:#fff;}
@@ -546,6 +581,8 @@ let compras = [];
 let ingredientes = [];
 let productos = [];
 let semanasAbiertas = new Set();
+let diasAbiertos = new Set();
+let turnosAbiertos = new Set();
 let detalleVentasAbiertos = new Set();
 let semanasComprasAbiertas = new Set();
 let detalleComprasAbiertos = new Set();
@@ -686,6 +723,9 @@ async function init(){
     const masReciente = ventas.map(v=>v.fecha).sort().reverse()[0];
     const {anio,semana} = semanaISO(masReciente);
     semanasAbiertas.add(anio+'-'+semana);
+    diasAbiertos.add(masReciente);
+    turnosAbiertos.add(masReciente+'|Mañana');
+    turnosAbiertos.add(masReciente+'|Tarde');
   }
   if(compras.length){
     const masRecienteCompra = compras.map(c=>c.fecha).sort().reverse()[0];
@@ -812,6 +852,18 @@ function toggleSemana(clave){
   renderVentas();
 }
 
+function toggleDia(fecha){
+  if(diasAbiertos.has(fecha)) diasAbiertos.delete(fecha);
+  else diasAbiertos.add(fecha);
+  renderVentas();
+}
+
+function toggleTurno(clave){
+  if(turnosAbiertos.has(clave)) turnosAbiertos.delete(clave);
+  else turnosAbiertos.add(clave);
+  renderVentas();
+}
+
 function toggleDetalleVenta(i){
   if(detalleVentasAbiertos.has(i)) detalleVentasAbiertos.delete(i);
   else detalleVentasAbiertos.add(i);
@@ -822,60 +874,146 @@ function renderVentas(){
   const cont = document.getElementById('listaSemanas');
   if(ventas.length===0){ cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>'; }
   else{
-    const grupos = {};
+    const semGrupos = {};
     ventas.forEach((v,i)=>{
       const {anio,semana} = semanaISO(v.fecha);
-      const clave = anio+'-'+semana;
-      if(!grupos[clave]) grupos[clave] = {anio, semana, items:[], lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha)};
-      grupos[clave].items.push({...v, i});
+      const claveSem = anio+'-'+semana;
+      if(!semGrupos[claveSem]) semGrupos[claveSem] = {anio, semana, items:[], lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha)};
+      semGrupos[claveSem].items.push({...v, i});
     });
-    const claves = Object.keys(grupos).sort().reverse();
-    cont.innerHTML = claves.map(clave=>{
-      const g = grupos[clave];
-      const piezas = g.items.reduce((s,v)=>s+v.cantidad,0);
-      const ingreso = g.items.reduce((s,v)=>s+v.cantidad*v.precio,0);
-      const abierta = semanasAbiertas.has(clave);
-      const itemsOrdenados = g.items.slice().sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+    const clavesSem = Object.keys(semGrupos).sort().reverse();
+
+    cont.innerHTML = clavesSem.map(claveSem=>{
+      const g = semGrupos[claveSem];
+      const piezasSem = g.items.reduce((s,v)=>s+v.cantidad,0);
+      const ingresoSem = g.items.reduce((s,v)=>s+v.cantidad*v.precio,0);
+      const abiertaSem = semanasAbiertas.has(claveSem);
+
+      const diaGrupos = {};
+      g.items.forEach(v=>{
+        if(!diaGrupos[v.fecha]) diaGrupos[v.fecha] = [];
+        diaGrupos[v.fecha].push(v);
+      });
+      const fechasOrdenadas = Object.keys(diaGrupos).sort().reverse();
+
+      const diasHtml = fechasOrdenadas.map(fecha=>{
+        const itemsDia = diaGrupos[fecha];
+        const piezasDia = itemsDia.reduce((s,v)=>s+v.cantidad,0);
+        const ingresoDia = itemsDia.reduce((s,v)=>s+v.cantidad*v.precio,0);
+        const abiertoDia = diasAbiertos.has(fecha);
+
+        const turnoGrupos = {};
+        itemsDia.forEach(v=>{
+          if(!turnoGrupos[v.turno]) turnoGrupos[v.turno] = [];
+          turnoGrupos[v.turno].push(v);
+        });
+        const turnosOrdenados = Object.keys(turnoGrupos).sort();
+
+        // Resumen por producto del día (cantidad, precio unitario si es único, ingreso)
+        const prodDia = {};
+        itemsDia.forEach(v=>{
+          if(!prodDia[v.producto]) prodDia[v.producto] = {cantidad:0, total:0, precios:new Set()};
+          prodDia[v.producto].cantidad += v.cantidad;
+          prodDia[v.producto].total += v.cantidad*v.precio;
+          prodDia[v.producto].precios.add(v.precio);
+        });
+        const prodDiaHtml = Object.keys(prodDia).sort().map(p=>{
+          const d = prodDia[p];
+          const precioTxt = d.precios.size===1 ? `$${[...d.precios][0]}/pza` : 'precio mixto';
+          return `
+            <div class="prod-resumen-row">
+              <span class="prod-nombre">${p}</span>
+              <span class="prod-datos">${d.cantidad} pzas · ${precioTxt} · <b>$${d.total.toLocaleString()}</b></span>
+            </div>
+          `;
+        }).join('');
+
+        const turnosHtml = turnosOrdenados.map(turno=>{
+          const itemsTurno = turnoGrupos[turno];
+          const piezasTurno = itemsTurno.reduce((s,v)=>s+v.cantidad,0);
+          const ingresoTurno = itemsTurno.reduce((s,v)=>s+v.cantidad*v.precio,0);
+          const claveTurno = fecha+'|'+turno;
+          const abiertoTurno = turnosAbiertos.has(claveTurno);
+
+          const itemsHtml = itemsTurno.map(v=>{
+            const detalleAbierto = detalleVentasAbiertos.has(v.i);
+            return `
+              <li>
+                <div style="width:100%">
+                  <div class="item-fila" onclick="toggleDetalleVenta(${v.i})">
+                    <div class="izq">
+                      <b>${v.producto} x${v.cantidad}</b>
+                    </div>
+                    <div class="der">
+                      <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
+                      <button class="del" onclick="event.stopPropagation(); borrarVenta(${v.i})">✕</button>
+                    </div>
+                  </div>
+                  ${detalleAbierto ? `
+                    <div class="item-detalle">
+                      ${v.llevadas!==undefined ? `Llevaste: <b>${v.llevadas}</b> · Sobraron: <b>${v.sobrantes||0}</b> · Cortesía: <b>${v.cortesias||0}</b><br>` : ''}
+                      Vendiste: <b>${v.cantidad}</b> · Precio unitario: <b>$${v.precio}</b> · Total: <b>$${(v.cantidad*v.precio).toLocaleString()}</b>
+                    </div>
+                  ` : ''}
+                </div>
+              </li>
+            `;
+          }).join('');
+
+          return `
+            <div class="turno-block ${abiertoTurno?'abierta':''}">
+              <div class="turno-header" onclick="toggleTurno('${claveTurno}')">
+                <div class="turno-titulo">${turno}</div>
+                <div class="resumen-mini">
+                  <span class="pill">${piezasTurno} pzas</span>
+                  <span class="pill">$${ingresoTurno.toLocaleString()}</span>
+                  <span class="chevron">▶</span>
+                </div>
+              </div>
+              <div class="turno-body">
+                <ul class="lista">${itemsHtml}</ul>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="dia-block ${abiertoDia?'abierta':''}">
+            <div class="dia-header" onclick="toggleDia('${fecha}')">
+              <div class="dia-titulo">${fmtFecha(fecha)}</div>
+              <div class="resumen-mini">
+                <span class="pill">${piezasDia} pzas</span>
+                <span class="pill">$${ingresoDia.toLocaleString()}</span>
+                <span class="chevron">▶</span>
+              </div>
+            </div>
+            <div class="dia-body">
+              <div class="prod-resumen">
+                ${prodDiaHtml}
+                <div class="prod-resumen-row prod-resumen-total">
+                  <span>Total del día</span>
+                  <span><b>${piezasDia} pzas · $${ingresoDia.toLocaleString()}</b></span>
+                </div>
+              </div>
+              ${turnosHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
       return `
-        <div class="semana ${abierta?'abierta':''}">
-          <div class="semana-header" onclick="toggleSemana('${clave}')">
+        <div class="semana ${abiertaSem?'abierta':''}">
+          <div class="semana-header" onclick="toggleSemana('${claveSem}')">
             <div class="titulo">Semana ${g.semana}
               <small>${fmtRango(g.lun,g.vie)} · ${g.anio}</small>
             </div>
             <div class="resumen-mini">
-              <span class="pill">${piezas} pzas</span>
-              <span class="pill">$${ingreso.toLocaleString()}</span>
+              <span class="pill">${piezasSem} pzas</span>
+              <span class="pill">$${ingresoSem.toLocaleString()}</span>
               <span class="chevron">▶</span>
             </div>
           </div>
-          <div class="semana-body">
-            <ul class="lista">
-              ${itemsOrdenados.map(v=>{
-                const detalleAbierto = detalleVentasAbiertos.has(v.i);
-                return `
-                <li>
-                  <div style="width:100%">
-                    <div class="item-fila" onclick="toggleDetalleVenta(${v.i})">
-                      <div class="izq">
-                        <b>${v.producto} x${v.cantidad}</b>
-                        <span>${fmtFecha(v.fecha)} · ${v.turno}</span>
-                      </div>
-                      <div class="der">
-                        <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
-                        <button class="del" onclick="event.stopPropagation(); borrarVenta(${v.i})">✕</button>
-                      </div>
-                    </div>
-                    ${detalleAbierto ? `
-                      <div class="item-detalle">
-                        ${v.llevadas!==undefined ? `Llevaste: <b>${v.llevadas}</b> · Sobraron: <b>${v.sobrantes||0}</b> · Cortesía: <b>${v.cortesias||0}</b><br>` : ''}
-                        Vendiste: <b>${v.cantidad}</b> · Precio unitario: <b>$${v.precio}</b> · Total: <b>$${(v.cantidad*v.precio).toLocaleString()}</b>
-                      </div>
-                    ` : ''}
-                  </div>
-                </li>
-              `}).join('')}
-            </ul>
-          </div>
+          <div class="semana-body">${diasHtml}</div>
         </div>
       `;
     }).join('');
@@ -1167,11 +1305,12 @@ function renderResumen(){
 let charts = {};
 function dibujarGraficos(){
   const porDia = {};
-  const porTurno = {'Mañana':0,'Tarde':0};
+  const porDiaTurno = {};
   const porProducto = {};
   ventas.forEach(v=>{
     porDia[v.fecha] = (porDia[v.fecha]||0) + v.cantidad;
-    porTurno[v.turno] = (porTurno[v.turno]||0) + v.cantidad;
+    if(!porDiaTurno[v.fecha]) porDiaTurno[v.fecha] = {'Mañana':0,'Tarde':0};
+    porDiaTurno[v.fecha][v.turno] = (porDiaTurno[v.fecha][v.turno]||0) + v.cantidad;
     porProducto[v.producto] = (porProducto[v.producto]||0) + v.cantidad;
   });
   const diasOrdenados = Object.keys(porDia).sort();
@@ -1180,16 +1319,34 @@ function dibujarGraficos(){
 
   if(charts.dias) charts.dias.destroy();
   charts.dias = new Chart(document.getElementById('chartDias'), {
-    type:'bar',
-    data:{ labels:diasOrdenados.map(fmtFecha), datasets:[{ data:diasOrdenados.map(d=>porDia[d]), backgroundColor:paleta.salsa, borderRadius:6 }] },
+    type:'line',
+    data:{ labels:diasOrdenados.map(fmtFecha), datasets:[{
+      label:'Piezas vendidas',
+      data:diasOrdenados.map(d=>porDia[d]),
+      borderColor:paleta.salsa, backgroundColor:paleta.salsa,
+      tension:0.3, pointRadius:4, pointBackgroundColor:paleta.salsa, fill:false
+    }] },
     options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:5}} } }
   });
 
   if(charts.turno) charts.turno.destroy();
   charts.turno = new Chart(document.getElementById('chartTurno'), {
-    type:'doughnut',
-    data:{ labels:Object.keys(porTurno), datasets:[{ data:Object.values(porTurno), backgroundColor:[paleta.naranjaClaro, paleta.salsa] }] },
-    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
+    type:'line',
+    data:{ labels:diasOrdenados.map(fmtFecha), datasets:[
+      {
+        label:'Mañana',
+        data:diasOrdenados.map(d=>porDiaTurno[d]['Mañana']||0),
+        borderColor:paleta.naranjaClaro, backgroundColor:paleta.naranjaClaro,
+        tension:0.3, pointRadius:4, pointBackgroundColor:paleta.naranjaClaro, fill:false
+      },
+      {
+        label:'Tarde',
+        data:diasOrdenados.map(d=>porDiaTurno[d]['Tarde']||0),
+        borderColor:paleta.salsa, backgroundColor:paleta.salsa,
+        tension:0.3, pointRadius:4, pointBackgroundColor:paleta.salsa, fill:false
+      }
+    ] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:5}} } }
   });
 
   if(charts.producto) charts.producto.destroy();
