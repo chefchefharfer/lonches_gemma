@@ -350,6 +350,7 @@
   <nav class="sidebar">
     <div class="marca"><span class="logo-emoji">🥪</span><h1>Lonches Gemma</h1></div>
     <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
+    <button class="tab-btn" data-vista="ganancias" onclick="cambiarVista('ganancias')"><span class="ico">💰</span>Ganancias</button>
     <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
     <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingredientes</button>
     <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Productos</button>
@@ -408,6 +409,24 @@
           <h2>Historial de ventas por semana</h2>
           <p class="sub">Toca una semana para desplegarla; toca una venta para ver su desglose</p>
           <div id="listaSemanas"></div>
+        </div>
+      </section>
+
+      <!-- GANANCIAS -->
+      <section id="vista-ganancias" class="vista">
+        <div class="card">
+          <h2>Ganancia neta</h2>
+          <p class="sub">Ganancia neta = piezas vendidas × margen neto vigente de cada producto al momento de la venta. El Lonche ya incluye mano de obra e indirectos prorrateados; Chocoflán y los demás productos solo restan costo de producto + empaque.</p>
+          <div class="grid2">
+            <div class="stat"><div class="num" id="gananciaHoy">$0</div><div class="lbl">Ganancia neta hoy</div></div>
+            <div class="stat"><div class="num" id="gananciaSemana">$0</div><div class="lbl">Ganancia neta esta semana</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Ganancias por semana</h2>
+          <p class="sub">Toca una semana para ver el desglose por día y por producto</p>
+          <div id="listaGananciasSemanas"></div>
         </div>
       </section>
 
@@ -541,6 +560,7 @@
 
 <nav class="tabs">
   <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
+  <button class="tab-btn" data-vista="ganancias" onclick="cambiarVista('ganancias')"><span class="ico">💰</span>Ganan.</button>
   <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
   <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingr.</button>
   <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Prod.</button>
@@ -586,6 +606,7 @@ let turnosAbiertos = new Set();
 let detalleVentasAbiertos = new Set();
 let semanasComprasAbiertas = new Set();
 let detalleComprasAbiertos = new Set();
+let semanasGananciasAbiertas = new Set();
 
 /* ---------- Datos semilla (solo si no hay nada guardado) ---------- */
 const VENTAS_SEMILLA = [
@@ -665,6 +686,31 @@ function fmtRango(lun,vie){
   return `${lun.getDate()} - ${vie.getDate()} ${meses[vie.getMonth()]}`;
 }
 
+/* ---------- Costeo / márgenes (Opción B: solo el Lonche prorratea mano de
+   obra e indirectos por pieza; Chocoflan y demás productos solo restan
+   costo de producto + empaque) ---------- */
+function margenNetoActual(nombre){
+  if(nombre === 'Lonche'){
+    const precio = parseFloat(document.getElementById('ing-precio')?.value || 30);
+    const costoInsumos = ingredientes.reduce((s,ing)=>s+(ing.costo||0),0);
+    const manoObra = parseFloat(document.getElementById('ing-manoobra')?.value || 0);
+    const indirectos = parseFloat(document.getElementById('ing-indirectos')?.value || 0);
+    return precio - costoInsumos - manoObra - indirectos;
+  }
+  const p = productos.find(pr=>pr.nombre === nombre);
+  if(!p) return 0;
+  const costoBase = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
+  const costoExtras = p.extras.reduce((s,e)=>s+(e.costo||0),0);
+  const costoTotal = costoBase + costoExtras;
+  return p.precioVenta - costoTotal;
+}
+
+function margenNetoVenta(v){
+  // usa el margen neto guardado en el momento de la venta si existe;
+  // si es un registro viejo sin ese dato, cae al margen vigente como aproximación
+  return (v.margenNeto !== undefined) ? v.margenNeto : margenNetoActual(v.producto);
+}
+
 /* ---------- Inicio ---------- */
 async function init(){
   document.getElementById('t-fecha').value = hoyISO();
@@ -718,11 +764,12 @@ async function init(){
   productos = await cargar('productos', null);
   if(productos === null){ productos = PRODUCTOS_SEMILLA; await guardar('productos', productos); }
 
-  // abrir la semana mas reciente por default (ventas y compras)
+  // abrir la semana mas reciente por default (ventas, ganancias y compras)
   if(ventas.length){
     const masReciente = ventas.map(v=>v.fecha).sort().reverse()[0];
     const {anio,semana} = semanaISO(masReciente);
     semanasAbiertas.add(anio+'-'+semana);
+    semanasGananciasAbiertas.add(anio+'-'+semana);
     diasAbiertos.add(masReciente);
     turnosAbiertos.add(masReciente+'|Mañana');
     turnosAbiertos.add(masReciente+'|Tarde');
@@ -791,6 +838,7 @@ function cambiarVista(v){
   document.querySelectorAll(`.tab-btn[data-vista="${v}"]`).forEach(b=>b.classList.add('activo'));
   if(v==='resumen') dibujarGraficos();
   if(v==='ventas') renderConteoProductos();
+  if(v==='ganancias') renderGanancias();
 }
 
 function toast(msg){
@@ -818,7 +866,8 @@ async function registrarTurno(){
     ventas.push({
       fecha, turno, producto:p.nombre,
       llevadas:llevaste, sobrantes:sobraron, cortesias:cortesia,
-      cantidad:vendiste, precio:p.precio
+      cantidad:vendiste, precio:p.precio,
+      margenNeto: margenNetoActual(p.nombre)
     });
   });
 
@@ -835,6 +884,7 @@ async function registrarTurno(){
 
   const {anio,semana} = semanaISO(fecha);
   semanasAbiertas.add(anio+'-'+semana);
+  semanasGananciasAbiertas.add(anio+'-'+semana);
 
   toast('Turno registrado ✓');
   renderTodo();
@@ -1026,6 +1076,102 @@ function renderVentas(){
   document.getElementById('hoyCortesias').textContent = deHoy.reduce((s,v)=>s+(v.cortesias||0),0);
 }
 
+/* ---------- Ganancias (por día y por semana) ---------- */
+function toggleSemanaGanancias(clave){
+  if(semanasGananciasAbiertas.has(clave)) semanasGananciasAbiertas.delete(clave);
+  else semanasGananciasAbiertas.add(clave);
+  renderGanancias();
+}
+
+function renderGanancias(){
+  const cont = document.getElementById('listaGananciasSemanas');
+  if(!cont) return;
+
+  if(ventas.length===0){
+    cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>';
+  } else {
+    const semGrupos = {};
+    ventas.forEach(v=>{
+      const ganancia = v.cantidad * margenNetoVenta(v);
+      const {anio,semana} = semanaISO(v.fecha);
+      const claveSem = anio+'-'+semana;
+      if(!semGrupos[claveSem]) semGrupos[claveSem] = {anio, semana, lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha), dias:{}, total:0};
+      if(!semGrupos[claveSem].dias[v.fecha]) semGrupos[claveSem].dias[v.fecha] = {total:0, productos:{}};
+      semGrupos[claveSem].dias[v.fecha].total += ganancia;
+      semGrupos[claveSem].total += ganancia;
+      if(!semGrupos[claveSem].dias[v.fecha].productos[v.producto]) semGrupos[claveSem].dias[v.fecha].productos[v.producto] = {cantidad:0, ganancia:0};
+      semGrupos[claveSem].dias[v.fecha].productos[v.producto].cantidad += v.cantidad;
+      semGrupos[claveSem].dias[v.fecha].productos[v.producto].ganancia += ganancia;
+    });
+
+    const clavesSem = Object.keys(semGrupos).sort().reverse();
+
+    cont.innerHTML = clavesSem.map(claveSem=>{
+      const g = semGrupos[claveSem];
+      const abiertaSem = semanasGananciasAbiertas.has(claveSem);
+      const fechasOrdenadas = Object.keys(g.dias).sort().reverse();
+
+      const diasHtml = fechasOrdenadas.map(fecha=>{
+        const d = g.dias[fecha];
+        const prodHtml = Object.keys(d.productos).sort().map(p=>{
+          const dp = d.productos[p];
+          return `
+            <div class="prod-resumen-row">
+              <span class="prod-nombre">${p}</span>
+              <span class="prod-datos">${dp.cantidad} pzas · <b>$${dp.ganancia.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></span>
+            </div>
+          `;
+        }).join('');
+        return `
+          <div class="dia-block">
+            <div class="dia-header" style="cursor:default;">
+              <div class="dia-titulo">${fmtFecha(fecha)}</div>
+              <div class="resumen-mini">
+                <span class="pill">$${d.total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+              </div>
+            </div>
+            <div class="prod-resumen">
+              ${prodHtml}
+              <div class="prod-resumen-row prod-resumen-total">
+                <span>Ganancia neta del día</span>
+                <span><b>$${d.total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="semana ${abiertaSem?'abierta':''}">
+          <div class="semana-header" onclick="toggleSemanaGanancias('${claveSem}')">
+            <div class="titulo">Semana ${g.semana}
+              <small>${fmtRango(g.lun,g.vie)} · ${g.anio}</small>
+            </div>
+            <div class="resumen-mini">
+              <span class="pill">$${g.total.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+              <span class="chevron">▶</span>
+            </div>
+          </div>
+          <div class="semana-body">${diasHtml}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const hoy = hoyISO();
+  const deHoy = ventas.filter(v=>v.fecha===hoy);
+  const gananciaHoy = deHoy.reduce((s,v)=>s + v.cantidad*margenNetoVenta(v), 0);
+  document.getElementById('gananciaHoy').textContent = '$'+gananciaHoy.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  const {anio:anioHoy, semana:semanaHoy} = semanaISO(hoy);
+  const deSemanaActual = ventas.filter(v=>{
+    const {anio,semana} = semanaISO(v.fecha);
+    return anio===anioHoy && semana===semanaHoy;
+  });
+  const gananciaSemana = deSemanaActual.reduce((s,v)=>s + v.cantidad*margenNetoVenta(v), 0);
+  document.getElementById('gananciaSemana').textContent = '$'+gananciaSemana.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
 /* ---------- Compras ---------- */
 async function agregarCompra(){
   const nombre = document.getElementById('c-nombre').value.trim();
@@ -1185,6 +1331,9 @@ function renderTotalesIngredientes(){
   elN.className = 'num ' + (margenNeto>=0?'pos':'neg');
   document.getElementById('ing-pctBruto').textContent = pctBruto.toFixed(1)+'%';
   document.getElementById('ing-pctNeto').textContent = pctNeto.toFixed(1)+'%';
+
+  // el margen del lonche cambió: refresca la vista de ganancias si está visible
+  if(document.getElementById('vista-ganancias')?.classList.contains('activa')) renderGanancias();
 }
 
 /* ---------- Productos (chocoflan y nuevos) ---------- */
@@ -1289,6 +1438,9 @@ function renderProductos(){
   }).join('');
 
   renderConteoProductos();
+
+  // los márgenes de los productos pudieron cambiar: refresca ganancias si está visible
+  if(document.getElementById('vista-ganancias')?.classList.contains('activa')) renderGanancias();
 }
 
 /* ---------- Resumen ---------- */
@@ -1362,6 +1514,7 @@ function renderTodo(){
   renderVentas();
   renderCompras();
   renderResumen();
+  renderGanancias();
 }
 
 async function borrarTodo(){
