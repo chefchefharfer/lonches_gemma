@@ -96,8 +96,8 @@
   .card h3{font-size:13px; color:var(--text-2); margin-top:14px; text-transform:none; letter-spacing:0;}
   .card .sub{font-size:12px; color:var(--text-2); margin:-8px 0 12px 0;}
 
-  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .grid2{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:10px;}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit, minmax(100px,1fr)); gap:10px;}
   .stat{
     background:var(--bg);
     border:1px solid var(--border);
@@ -177,6 +177,21 @@
     font-weight:700;
   }
   .del{background:none; border:none; color:var(--rojo-neg); font-size:16px; padding:2px 4px; cursor:pointer;}
+  .btn-icon{background:none; border:none; font-size:15px; padding:2px 5px; cursor:pointer; line-height:1;}
+  .btn-icon.restaurar{color:var(--verde);}
+  .btn-icon.ocultar{color:var(--text-2);}
+  .fila-eliminada{opacity:0.55;}
+  .fila-eliminada b, .fila-eliminada .prod-nombre{text-decoration:line-through;}
+  .etiqueta-eliminado{font-size:10px; color:var(--rojo-neg); font-weight:700; text-transform:uppercase; letter-spacing:0.03em; margin-left:6px;}
+  .link-ocultos{display:block; text-align:center; font-size:12px; color:var(--text-2); padding:10px 0 2px; cursor:pointer; text-decoration:underline; background:none; border:none; width:100%; font-family:inherit;}
+
+  .salud-badge{display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-weight:800; font-size:13px;}
+  .salud-badge.saludable{background:var(--verde-bg); color:var(--verde);}
+  .salud-badge.alerta{background:#FCF0DC; color:#8A5A17;}
+  .salud-badge.critico{background:var(--rojo-bg); color:var(--rojo-neg);}
+  .salud-frase{font-size:13px; color:var(--text-2); margin:10px 0 0 0; line-height:1.5;}
+  .salud-lista{margin:10px 0 0 0; padding-left:18px; font-size:12.5px; color:var(--text-2);}
+  .salud-lista li{padding:2px 0;}
 
   .vacio{text-align:center; color:var(--text-2); font-size:13px; padding:14px 0;}
 
@@ -263,6 +278,12 @@
   .conteo-precio{font-weight:500; font-size:11.5px; color:var(--text-2);}
   .conteo-resumen{margin-top:8px; font-size:12.5px; font-weight:700; color:var(--verde);}
 
+  /* Contenedores de tarjetas repetibles: fluidos, se acomodan solos según el ancho disponible */
+  #listaConteoProductos{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:10px;}
+  #listaConteoProductos .conteo-producto{margin-top:0;}
+  #listaProductos{display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:12px;}
+  #listaProductos .producto-card{margin-bottom:0;}
+
   nav.tabs{
     position:fixed; bottom:0; left:0; right:0;
     background:#fff;
@@ -295,12 +316,7 @@
   .app-layout{display:flex; min-height:100vh;}
   .app-content{flex:1; min-width:0;}
 
-  @media (max-width:520px){
-    .grid4{ grid-template-columns:1fr 1fr; }
-    .grid3{ grid-template-columns:1fr 1fr; }
-  }
-
-  @media (min-width: 900px){
+  @media (min-width: 768px){
     body{padding-bottom:0;}
     header.top{display:none;}
     nav.tabs{display:none;}
@@ -327,11 +343,14 @@
       background:var(--sidebar-bg-2); color:var(--sidebar-text-active);
       border-left-color:var(--naranja);
     }
-    main{max-width:1080px; padding:24px 30px 40px 30px;}
+    main{max-width:1080px; padding:24px 30px 40px 30px; margin:0 auto;}
     .banner{border-radius:10px; margin:22px 22px 0 22px; padding:20px 24px;}
     .banner h2{font-size:22px;}
-    .grid2{grid-template-columns:1fr 1fr;}
     .card{padding:20px 22px;}
+  }
+
+  @media (min-width: 1300px){
+    main{max-width:1180px;}
   }
 
   .chart-wrap{background:#fff; border-radius:8px; padding:10px 6px; margin-top:10px;}
@@ -407,8 +426,9 @@
 
         <div class="card">
           <h2>Historial de ventas por semana</h2>
-          <p class="sub">Toca una semana para desplegarla; toca una venta para ver su desglose</p>
+          <p class="sub">Toca una semana para desplegarla; toca una venta para ver su desglose. Eliminar pide confirmación y no borra el dato, solo lo tacha.</p>
           <div id="listaSemanas"></div>
+          <div id="ocultosVentasToggle"></div>
         </div>
       </section>
 
@@ -416,7 +436,7 @@
       <section id="vista-ganancias" class="vista">
         <div class="card">
           <h2>Ganancia neta</h2>
-          <p class="sub">Ganancia neta = piezas vendidas × margen neto vigente de cada producto al momento de la venta. El Lonche ya incluye mano de obra e indirectos prorrateados; Chocoflán y los demás productos solo restan costo de producto + empaque.</p>
+          <p class="sub">Ganancia neta = piezas vendidas × margen neto vigente de cada producto al momento de la venta. Todos los productos (Lonche, Chocoflán y los demás) ya incluyen automáticamente mano de obra e indirectos prorrateados por pieza, además de su costo de insumos/lote y empaque.</p>
           <div class="grid2">
             <div class="stat"><div class="num" id="gananciaHoy">$0</div><div class="lbl">Ganancia neta hoy</div></div>
             <div class="stat"><div class="num" id="gananciaSemana">$0</div><div class="lbl">Ganancia neta esta semana</div></div>
@@ -467,8 +487,9 @@
 
         <div class="card">
           <h2>Historial de compras por semana</h2>
-          <p class="sub">Toca un insumo para ver su desglose (cantidad, costo total y costo por unidad)</p>
+          <p class="sub">Toca un insumo para ver su desglose (cantidad, costo total y costo por unidad). Eliminar pide confirmación y no borra el dato, solo lo tacha.</p>
           <div id="listaCompras"></div>
+          <div id="ocultosComprasToggle"></div>
         </div>
       </section>
 
@@ -476,8 +497,9 @@
       <section id="vista-ingredientes" class="vista">
         <div class="card">
           <h2>Ingredientes del lonche</h2>
-          <p class="sub">Actualiza el costo de cada ingrediente por pieza — el costeo se recalcula solo</p>
+          <p class="sub">Actualiza el costo de cada ingrediente por pieza — el costeo se recalcula solo. Eliminar pide confirmación y no borra el dato, solo lo tacha.</p>
           <div id="listaIngredientes"></div>
+          <div id="ocultosIngredientesToggle"></div>
           <button class="btn secundario chico" style="margin-top:12px;width:100%;" onclick="agregarIngrediente()">+ Agregar ingrediente</button>
         </div>
 
@@ -489,11 +511,11 @@
               <input type="number" step="0.01" id="ing-precio" value="30" oninput="renderIngredientes()">
             </div>
             <div>
-              <label>Mano de obra / pieza ($)</label>
+              <label>Mano de obra / pieza ($) — aplica a todos los productos</label>
               <input type="number" step="0.01" id="ing-manoobra" value="2.30" oninput="renderIngredientes()">
             </div>
           </div>
-          <label>Costos fijos e indirectos / pieza ($) — luz, gas, transporte, etc. prorrateados</label>
+          <label>Costos fijos e indirectos / pieza ($) — luz, gas, transporte, etc. prorrateados; aplica a todos los productos</label>
           <input type="number" step="0.01" id="ing-indirectos" value="1.90" oninput="renderIngredientes()">
 
           <div class="grid2" style="margin-top:14px;">
@@ -513,14 +535,21 @@
       <section id="vista-productos" class="vista">
         <div class="card">
           <h2>Otros productos</h2>
-          <p class="sub">Chocoflan y cualquier otro producto nuevo que decidas vender. Pon el costo y el precio de venta, y aquí se calculan los márgenes.</p>
+          <p class="sub">Chocoflan y cualquier otro producto nuevo que decidas vender. Pon el costo y el precio de venta; el margen neto ya incluye automáticamente la mano de obra y los indirectos definidos en Ingredientes, igual que el Lonche. Eliminar pide confirmación y no borra el dato, solo lo tacha.</p>
           <div id="listaProductos"></div>
+          <div id="ocultosProductosToggle"></div>
           <button class="btn secundario" onclick="agregarProducto()">+ Agregar producto nuevo</button>
         </div>
       </section>
 
       <!-- RESUMEN -->
       <section id="vista-resumen" class="vista">
+        <div class="card">
+          <h2>Análisis ejecutivo</h2>
+          <p class="sub">Qué tan saludable está el negocio ahorita, en una mirada rápida</p>
+          <div id="saludNegocio"></div>
+        </div>
+
         <div class="card">
           <h2>Resumen general</h2>
           <div class="grid2">
@@ -608,6 +637,17 @@ let semanasComprasAbiertas = new Set();
 let detalleComprasAbiertos = new Set();
 let semanasGananciasAbiertas = new Set();
 
+/* ---------- Borrado lógico (soft delete): estado de "mostrar ocultos" por sección ---------- */
+let mostrarOcultosVentas = false;
+let mostrarOcultosCompras = false;
+let mostrarOcultosIngredientes = false;
+let mostrarOcultosProductos = false;
+
+function ventasActivas(){ return ventas.filter(v=>!v.eliminado); }
+function comprasActivas(){ return compras.filter(c=>!c.eliminado); }
+function ingredientesActivos(){ return ingredientes.filter(ing=>!ing.eliminado); }
+function productosActivos(){ return productos.filter(p=>!p.eliminado); }
+
 /* ---------- Datos semilla (solo si no hay nada guardado) ---------- */
 const VENTAS_SEMILLA = [
   {fecha:'2026-08-11', turno:'Tarde', producto:'Lonche', cantidad:11, precio:30},
@@ -690,18 +730,19 @@ function fmtRango(lun,vie){
    obra e indirectos por pieza; Chocoflan y demás productos solo restan
    costo de producto + empaque) ---------- */
 function margenNetoActual(nombre){
+  const manoObra = parseFloat(document.getElementById('ing-manoobra')?.value || 0);
+  const indirectos = parseFloat(document.getElementById('ing-indirectos')?.value || 0);
   if(nombre === 'Lonche'){
     const precio = parseFloat(document.getElementById('ing-precio')?.value || 30);
-    const costoInsumos = ingredientes.reduce((s,ing)=>s+(ing.costo||0),0);
-    const manoObra = parseFloat(document.getElementById('ing-manoobra')?.value || 0);
-    const indirectos = parseFloat(document.getElementById('ing-indirectos')?.value || 0);
+    const costoInsumos = ingredientesActivos().reduce((s,ing)=>s+(ing.costo||0),0);
     return precio - costoInsumos - manoObra - indirectos;
   }
-  const p = productos.find(pr=>pr.nombre === nombre);
+  const p = productosActivos().find(pr=>pr.nombre === nombre);
   if(!p) return 0;
   const costoBase = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
-  const costoExtras = p.extras.reduce((s,e)=>s+(e.costo||0),0);
-  const costoTotal = costoBase + costoExtras;
+  const costoExtras = (p.extras||[]).filter(e=>!e.eliminado).reduce((s,e)=>s+(e.costo||0),0);
+  // metodología uniforme: todos los productos prorratean mano de obra e indirectos igual que el Lonche
+  const costoTotal = costoBase + costoExtras + manoObra + indirectos;
   return p.precioVenta - costoTotal;
 }
 
@@ -788,7 +829,7 @@ async function init(){
 
 function productosVendibles(){
   return [{nombre:'Lonche', precio: parseFloat(document.getElementById('ing-precio')?.value || 30)}]
-    .concat(productos.map(p=>({nombre:p.nombre, precio:p.precioVenta})));
+    .concat(productosActivos().map(p=>({nombre:p.nombre, precio:p.precioVenta})));
 }
 
 function renderConteoProductos(){
@@ -836,7 +877,7 @@ function cambiarVista(v){
   document.getElementById('vista-'+v).classList.add('activa');
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('activo'));
   document.querySelectorAll(`.tab-btn[data-vista="${v}"]`).forEach(b=>b.classList.add('activo'));
-  if(v==='resumen') dibujarGraficos();
+  if(v==='resumen'){ renderResumen(); dibujarGraficos(); }
   if(v==='ventas') renderConteoProductos();
   if(v==='ganancias') renderGanancias();
 }
@@ -891,9 +932,25 @@ async function registrarTurno(){
 }
 
 async function borrarVenta(i){
-  ventas.splice(i,1);
+  if(!confirm('¿Eliminar esta venta? El registro no se pierde: queda tachado y lo puedes restaurar después.')) return;
+  ventas[i].eliminado = true;
   await guardar('ventas', ventas);
   renderTodo();
+}
+async function restaurarVenta(i){
+  ventas[i].eliminado = false;
+  ventas[i].oculto = false;
+  await guardar('ventas', ventas);
+  renderTodo();
+}
+async function ocultarVenta(i){
+  ventas[i].oculto = true;
+  await guardar('ventas', ventas);
+  renderVentas();
+}
+function toggleOcultosVentas(){
+  mostrarOcultosVentas = !mostrarOcultosVentas;
+  renderVentas();
 }
 
 function toggleSemana(clave){
@@ -922,21 +979,22 @@ function toggleDetalleVenta(i){
 
 function renderVentas(){
   const cont = document.getElementById('listaSemanas');
-  if(ventas.length===0){ cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>'; }
+  const visibles = ventas.map((v,i)=>({...v,i})).filter(v=>!v.oculto || mostrarOcultosVentas);
+  if(visibles.length===0){ cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>'; }
   else{
     const semGrupos = {};
-    ventas.forEach((v,i)=>{
+    visibles.forEach(v=>{
       const {anio,semana} = semanaISO(v.fecha);
       const claveSem = anio+'-'+semana;
       if(!semGrupos[claveSem]) semGrupos[claveSem] = {anio, semana, items:[], lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha)};
-      semGrupos[claveSem].items.push({...v, i});
+      semGrupos[claveSem].items.push(v);
     });
     const clavesSem = Object.keys(semGrupos).sort().reverse();
 
     cont.innerHTML = clavesSem.map(claveSem=>{
       const g = semGrupos[claveSem];
-      const piezasSem = g.items.reduce((s,v)=>s+v.cantidad,0);
-      const ingresoSem = g.items.reduce((s,v)=>s+v.cantidad*v.precio,0);
+      const piezasSem = g.items.filter(v=>!v.eliminado).reduce((s,v)=>s+v.cantidad,0);
+      const ingresoSem = g.items.filter(v=>!v.eliminado).reduce((s,v)=>s+v.cantidad*v.precio,0);
       const abiertaSem = semanasAbiertas.has(claveSem);
 
       const diaGrupos = {};
@@ -948,8 +1006,8 @@ function renderVentas(){
 
       const diasHtml = fechasOrdenadas.map(fecha=>{
         const itemsDia = diaGrupos[fecha];
-        const piezasDia = itemsDia.reduce((s,v)=>s+v.cantidad,0);
-        const ingresoDia = itemsDia.reduce((s,v)=>s+v.cantidad*v.precio,0);
+        const piezasDia = itemsDia.filter(v=>!v.eliminado).reduce((s,v)=>s+v.cantidad,0);
+        const ingresoDia = itemsDia.filter(v=>!v.eliminado).reduce((s,v)=>s+v.cantidad*v.precio,0);
         const abiertoDia = diasAbiertos.has(fecha);
 
         const turnoGrupos = {};
@@ -961,7 +1019,7 @@ function renderVentas(){
 
         // Resumen por producto del día (cantidad, precio unitario si es único, ingreso)
         const prodDia = {};
-        itemsDia.forEach(v=>{
+        itemsDia.filter(v=>!v.eliminado).forEach(v=>{
           if(!prodDia[v.producto]) prodDia[v.producto] = {cantidad:0, total:0, precios:new Set()};
           prodDia[v.producto].cantidad += v.cantidad;
           prodDia[v.producto].total += v.cantidad*v.precio;
@@ -980,23 +1038,26 @@ function renderVentas(){
 
         const turnosHtml = turnosOrdenados.map(turno=>{
           const itemsTurno = turnoGrupos[turno];
-          const piezasTurno = itemsTurno.reduce((s,v)=>s+v.cantidad,0);
-          const ingresoTurno = itemsTurno.reduce((s,v)=>s+v.cantidad*v.precio,0);
+          const piezasTurno = itemsTurno.filter(v=>!v.eliminado).reduce((s,v)=>s+v.cantidad,0);
+          const ingresoTurno = itemsTurno.filter(v=>!v.eliminado).reduce((s,v)=>s+v.cantidad*v.precio,0);
           const claveTurno = fecha+'|'+turno;
           const abiertoTurno = turnosAbiertos.has(claveTurno);
 
           const itemsHtml = itemsTurno.map(v=>{
             const detalleAbierto = detalleVentasAbiertos.has(v.i);
+            const acciones = v.eliminado
+              ? `<button class="btn-icon restaurar" title="Restaurar" onclick="event.stopPropagation(); restaurarVenta(${v.i})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="event.stopPropagation(); ocultarVenta(${v.i})">🙈</button>`
+              : `<button class="del" onclick="event.stopPropagation(); borrarVenta(${v.i})">✕</button>`;
             return `
-              <li>
+              <li class="${v.eliminado?'fila-eliminada':''}">
                 <div style="width:100%">
                   <div class="item-fila" onclick="toggleDetalleVenta(${v.i})">
                     <div class="izq">
-                      <b>${v.producto} x${v.cantidad}</b>
+                      <b>${v.producto} x${v.cantidad}</b>${v.eliminado?'<span class="etiqueta-eliminado">Eliminado</span>':''}
                     </div>
                     <div class="der">
                       <span class="pill">$${(v.cantidad*v.precio).toLocaleString()}</span>
-                      <button class="del" onclick="event.stopPropagation(); borrarVenta(${v.i})">✕</button>
+                      ${acciones}
                     </div>
                   </div>
                   ${detalleAbierto ? `
@@ -1070,10 +1131,18 @@ function renderVentas(){
   }
 
   const hoy = hoyISO();
-  const deHoy = ventas.filter(v=>v.fecha===hoy);
+  const deHoy = ventasActivas().filter(v=>v.fecha===hoy);
   document.getElementById('hoyPiezas').textContent = deHoy.reduce((s,v)=>s+v.cantidad,0);
   document.getElementById('hoyIngreso').textContent = '$'+deHoy.reduce((s,v)=>s+v.cantidad*v.precio,0).toLocaleString();
   document.getElementById('hoyCortesias').textContent = deHoy.reduce((s,v)=>s+(v.cortesias||0),0);
+
+  const ocultosCont = document.getElementById('ocultosVentasToggle');
+  if(ocultosCont){
+    const n = ventas.filter(v=>v.oculto).length;
+    ocultosCont.innerHTML = n>0
+      ? `<button class="link-ocultos" onclick="toggleOcultosVentas()">${mostrarOcultosVentas ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${n})`}</button>`
+      : '';
+  }
 }
 
 /* ---------- Ganancias (por día y por semana) ---------- */
@@ -1087,11 +1156,12 @@ function renderGanancias(){
   const cont = document.getElementById('listaGananciasSemanas');
   if(!cont) return;
 
-  if(ventas.length===0){
+  const ventasG = ventasActivas();
+  if(ventasG.length===0){
     cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>';
   } else {
     const semGrupos = {};
-    ventas.forEach(v=>{
+    ventasG.forEach(v=>{
       const ganancia = v.cantidad * margenNetoVenta(v);
       const {anio,semana} = semanaISO(v.fecha);
       const claveSem = anio+'-'+semana;
@@ -1159,12 +1229,12 @@ function renderGanancias(){
   }
 
   const hoy = hoyISO();
-  const deHoy = ventas.filter(v=>v.fecha===hoy);
+  const deHoy = ventasActivas().filter(v=>v.fecha===hoy);
   const gananciaHoy = deHoy.reduce((s,v)=>s + v.cantidad*margenNetoVenta(v), 0);
   document.getElementById('gananciaHoy').textContent = '$'+gananciaHoy.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 
   const {anio:anioHoy, semana:semanaHoy} = semanaISO(hoy);
-  const deSemanaActual = ventas.filter(v=>{
+  const deSemanaActual = ventasActivas().filter(v=>{
     const {anio,semana} = semanaISO(v.fecha);
     return anio===anioHoy && semana===semanaHoy;
   });
@@ -1195,9 +1265,25 @@ async function agregarCompra(){
 }
 
 async function borrarCompra(i){
-  compras.splice(i,1);
+  if(!confirm('¿Eliminar esta compra? El registro no se pierde: queda tachado y lo puedes restaurar después.')) return;
+  compras[i].eliminado = true;
   await guardar('compras', compras);
   renderTodo();
+}
+async function restaurarCompra(i){
+  compras[i].eliminado = false;
+  compras[i].oculto = false;
+  await guardar('compras', compras);
+  renderTodo();
+}
+async function ocultarCompra(i){
+  compras[i].oculto = true;
+  await guardar('compras', compras);
+  renderCompras();
+}
+function toggleOcultosCompras(){
+  mostrarOcultosCompras = !mostrarOcultosCompras;
+  renderCompras();
 }
 
 function toggleSemanaCompra(clave){
@@ -1214,16 +1300,17 @@ function toggleDetalleCompra(i){
 
 function renderCompras(){
   const cont = document.getElementById('listaCompras');
-  if(compras.length===0){
+  const visiblesCompras = compras.map((c,i)=>({...c,i})).filter(c=>!c.oculto || mostrarOcultosCompras);
+  if(visiblesCompras.length===0){
     cont.innerHTML = '<p class="vacio">Sin compras registradas todavía</p>';
   } else {
     const grupos = {};
-    compras.forEach((c,i)=>{
+    visiblesCompras.forEach(c=>{
       const {anio,semana} = semanaISO(c.fecha);
       const clave = anio+'-'+semana;
       if(!grupos[clave]) grupos[clave] = {anio, semana, items:[], lun:lunesDeSemana(c.fecha), vie:viernesDeSemana(c.fecha), total:0};
-      grupos[clave].items.push({...c, i});
-      grupos[clave].total += c.costo;
+      grupos[clave].items.push(c);
+      if(!c.eliminado) grupos[clave].total += c.costo;
     });
     const claves = Object.keys(grupos).sort().reverse();
     cont.innerHTML = claves.map(clave=>{
@@ -1246,17 +1333,20 @@ function renderCompras(){
               ${itemsOrdenados.map(c=>{
                 const detalleAbierto = detalleComprasAbiertos.has(c.i);
                 const costoUnidad = c.cantidad ? (c.costo / c.cantidad) : null;
+                const acciones = c.eliminado
+                  ? `<button class="btn-icon restaurar" title="Restaurar" onclick="event.stopPropagation(); restaurarCompra(${c.i})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="event.stopPropagation(); ocultarCompra(${c.i})">🙈</button>`
+                  : `<button class="del" onclick="event.stopPropagation(); borrarCompra(${c.i})">✕</button>`;
                 return `
-                <li>
+                <li class="${c.eliminado?'fila-eliminada':''}">
                   <div style="width:100%">
                     <div class="item-fila" onclick="toggleDetalleCompra(${c.i})">
                       <div class="izq">
-                        <b>${c.nombre}</b>
+                        <b>${c.nombre}</b>${c.eliminado?'<span class="etiqueta-eliminado">Eliminado</span>':''}
                         <span>${fmtFecha(c.fecha)}</span>
                       </div>
                       <div class="der">
                         <span class="pill">$${c.costo.toLocaleString()}</span>
-                        <button class="del" onclick="event.stopPropagation(); borrarCompra(${c.i})">✕</button>
+                        ${acciones}
                       </div>
                     </div>
                     ${detalleAbierto ? `
@@ -1275,7 +1365,15 @@ function renderCompras(){
       `;
     }).join('');
   }
-  document.getElementById('totalCompras').textContent = '$'+compras.reduce((s,c)=>s+c.costo,0).toLocaleString();
+  document.getElementById('totalCompras').textContent = '$'+comprasActivas().reduce((s,c)=>s+c.costo,0).toLocaleString();
+
+  const ocultosCont = document.getElementById('ocultosComprasToggle');
+  if(ocultosCont){
+    const n = compras.filter(c=>c.oculto).length;
+    ocultosCont.innerHTML = n>0
+      ? `<button class="link-ocultos" onclick="toggleOcultosCompras()">${mostrarOcultosCompras ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${n})`}</button>`
+      : '';
+  }
 }
 
 /* ---------- Ingredientes / costeo del lonche ---------- */
@@ -1291,27 +1389,59 @@ async function actualizarIngrediente(i, campo, valor){
   renderTotalesIngredientes();
 }
 async function borrarIngrediente(i){
-  ingredientes.splice(i,1);
+  if(!confirm('¿Eliminar este ingrediente? No se pierde: queda tachado y lo puedes restaurar después.')) return;
+  ingredientes[i].eliminado = true;
   await guardar('ingredientes', ingredientes);
+  renderIngredientes();
+}
+async function restaurarIngrediente(i){
+  ingredientes[i].eliminado = false;
+  ingredientes[i].oculto = false;
+  await guardar('ingredientes', ingredientes);
+  renderIngredientes();
+}
+async function ocultarIngrediente(i){
+  ingredientes[i].oculto = true;
+  await guardar('ingredientes', ingredientes);
+  renderIngredientes();
+}
+function toggleOcultosIngredientes(){
+  mostrarOcultosIngredientes = !mostrarOcultosIngredientes;
   renderIngredientes();
 }
 
 function renderIngredientes(){
   const cont = document.getElementById('listaIngredientes');
-  cont.innerHTML = ingredientes.map((ing,i)=>`
-    <div class="receta-item">
-      <input type="text" value="${ing.nombre}" onchange="actualizarIngrediente(${i},'nombre',this.value)">
+  const visibles = ingredientes.map((ing,i)=>({...ing,_i:i})).filter(ing=>!ing.oculto || mostrarOcultosIngredientes);
+  cont.innerHTML = visibles.map((ing)=>{
+    const i = ing._i;
+    const acciones = ing.eliminado
+      ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarIngrediente(${i})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarIngrediente(${i})">🙈</button>`
+      : `<button class="del" onclick="borrarIngrediente(${i})">✕</button>`;
+    return `
+    <div class="receta-item ${ing.eliminado?'fila-eliminada':''}">
+      <input type="text" value="${ing.nombre}" ${ing.eliminado?'disabled':''} onchange="actualizarIngrediente(${i},'nombre',this.value)">
       <span>$</span>
-      <input type="number" step="0.01" value="${ing.costo}" onchange="actualizarIngrediente(${i},'costo',this.value)">
-      <button class="del" onclick="borrarIngrediente(${i})">✕</button>
+      <input type="number" step="0.01" value="${ing.costo}" ${ing.eliminado?'disabled':''} onchange="actualizarIngrediente(${i},'costo',this.value)">
+      ${acciones}
     </div>
-  `).join('');
+  `;
+  }).join('');
+
+  const ocultosCont = document.getElementById('ocultosIngredientesToggle');
+  if(ocultosCont){
+    const n = ingredientes.filter(ing=>ing.oculto).length;
+    ocultosCont.innerHTML = n>0
+      ? `<button class="link-ocultos" onclick="toggleOcultosIngredientes()">${mostrarOcultosIngredientes ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${n})`}</button>`
+      : '';
+  }
+
   renderTotalesIngredientes();
   renderConteoProductos();
 }
 
 function renderTotalesIngredientes(){
-  const costoInsumos = ingredientes.reduce((s,ing)=>s+(ing.costo||0),0);
+  const costoInsumos = ingredientesActivos().reduce((s,ing)=>s+(ing.costo||0),0);
   const precio = parseFloat(document.getElementById('ing-precio').value)||0;
   const manoObra = parseFloat(document.getElementById('ing-manoobra').value)||0;
   const indirectos = parseFloat(document.getElementById('ing-indirectos').value)||0;
@@ -1332,8 +1462,9 @@ function renderTotalesIngredientes(){
   document.getElementById('ing-pctBruto').textContent = pctBruto.toFixed(1)+'%';
   document.getElementById('ing-pctNeto').textContent = pctNeto.toFixed(1)+'%';
 
-  // el margen del lonche cambió: refresca la vista de ganancias si está visible
+  // el margen del lonche cambió: refresca la vista de ganancias y el resumen ejecutivo si están visibles
   if(document.getElementById('vista-ganancias')?.classList.contains('activa')) renderGanancias();
+  if(document.getElementById('vista-resumen')?.classList.contains('activa')) renderSaludEjecutivo();
 }
 
 /* ---------- Productos (chocoflan y nuevos) ---------- */
@@ -1358,8 +1489,24 @@ async function actualizarProducto(idx, campo, valor){
   renderProductos(idx);
 }
 async function borrarProducto(idx){
-  productos.splice(idx,1);
+  if(!confirm('¿Eliminar este producto? No se pierde: queda tachado y lo puedes restaurar después.')) return;
+  productos[idx].eliminado = true;
   await guardar('productos', productos);
+  renderProductos();
+}
+async function restaurarProducto(idx){
+  productos[idx].eliminado = false;
+  productos[idx].oculto = false;
+  await guardar('productos', productos);
+  renderProductos();
+}
+async function ocultarProducto(idx){
+  productos[idx].oculto = true;
+  await guardar('productos', productos);
+  renderProductos();
+}
+function toggleOcultosProductos(){
+  mostrarOcultosProductos = !mostrarOcultosProductos;
   renderProductos();
 }
 async function agregarExtra(idx){
@@ -1374,59 +1521,85 @@ async function actualizarExtra(idx, exIdx, campo, valor){
   renderProductos(idx);
 }
 async function borrarExtra(idx, exIdx){
-  productos[idx].extras.splice(exIdx,1);
+  if(!confirm('¿Eliminar este extra? No se pierde: queda tachado y lo puedes restaurar después.')) return;
+  productos[idx].extras[exIdx].eliminado = true;
+  await guardar('productos', productos);
+  renderProductos();
+}
+async function restaurarExtra(idx, exIdx){
+  productos[idx].extras[exIdx].eliminado = false;
   await guardar('productos', productos);
   renderProductos();
 }
 
 function renderProductos(){
   const cont = document.getElementById('listaProductos');
-  if(productos.length===0){ cont.innerHTML = '<p class="vacio">Sin productos adicionales todavía</p>'; renderConteoProductos(); return; }
+  const manoObra = parseFloat(document.getElementById('ing-manoobra')?.value || 0);
+  const indirectos = parseFloat(document.getElementById('ing-indirectos')?.value || 0);
+  const fijosPza = manoObra + indirectos;
 
-  cont.innerHTML = productos.map((p,idx)=>{
+  const visibles = productos.map((p,idx)=>({...p,_idx:idx})).filter(p=>!p.oculto || mostrarOcultosProductos);
+
+  if(visibles.length===0){ cont.innerHTML = '<p class="vacio">Sin productos adicionales todavía</p>'; renderConteoProductos(); return; }
+
+  cont.innerHTML = visibles.map((p)=>{
+    const idx = p._idx;
     const costoBase = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
-    const costoExtras = p.extras.reduce((s,e)=>s+(e.costo||0),0);
-    const costoTotal = costoBase + costoExtras;
-    const margenBruto = p.precioVenta - costoBase;
+    const extrasVisibles = (p.extras||[]).map((e,exIdx)=>({...e,_exIdx:exIdx}));
+    const costoExtras = extrasVisibles.filter(e=>!e.eliminado).reduce((s,e)=>s+(e.costo||0),0);
+    // metodología uniforme: mano de obra e indirectos prorrateados automáticamente, igual que el Lonche
+    const costoTotal = costoBase + costoExtras + fijosPza;
+    const margenBruto = p.precioVenta - costoBase - costoExtras;
     const margenNeto = p.precioVenta - costoTotal;
     const pctBruto = p.precioVenta>0 ? (margenBruto/p.precioVenta*100) : 0;
     const pctNeto = p.precioVenta>0 ? (margenNeto/p.precioVenta*100) : 0;
 
+    const accionesProd = p.eliminado
+      ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarProducto(${idx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarProducto(${idx})">🙈</button>`
+      : `<button class="del" onclick="borrarProducto(${idx})">✕</button>`;
+
     return `
-    <div class="producto-card">
+    <div class="producto-card ${p.eliminado?'fila-eliminada':''}">
       <div class="encabezado">
-        <input type="text" value="${p.nombre}" onchange="actualizarProducto(${idx},'nombre',this.value)">
-        <button class="del" onclick="borrarProducto(${idx})">✕</button>
+        <input type="text" value="${p.nombre}" ${p.eliminado?'disabled':''} onchange="actualizarProducto(${idx},'nombre',this.value)">
+        ${p.eliminado?'<span class="etiqueta-eliminado">Eliminado</span>':''}
+        ${accionesProd}
       </div>
 
       <div class="grid3">
         <div>
           <label>Costo del lote ($)</label>
-          <input type="number" step="0.01" value="${p.costoLote}" onchange="actualizarProducto(${idx},'costoLote',this.value)">
+          <input type="number" step="0.01" value="${p.costoLote}" ${p.eliminado?'disabled':''} onchange="actualizarProducto(${idx},'costoLote',this.value)">
         </div>
         <div>
           <label>Piezas por lote</label>
-          <input type="number" step="1" value="${p.piezasLote}" onchange="actualizarProducto(${idx},'piezasLote',this.value)">
+          <input type="number" step="1" value="${p.piezasLote}" ${p.eliminado?'disabled':''} onchange="actualizarProducto(${idx},'piezasLote',this.value)">
         </div>
         <div>
           <label>Precio de venta ($/pza)</label>
-          <input type="number" step="0.01" value="${p.precioVenta}" onchange="actualizarProducto(${idx},'precioVenta',this.value)">
+          <input type="number" step="0.01" value="${p.precioVenta}" ${p.eliminado?'disabled':''} onchange="actualizarProducto(${idx},'precioVenta',this.value)">
         </div>
       </div>
 
       <h3>Empaque / extras por pieza</h3>
-      ${p.extras.map((ex,exIdx)=>`
-        <div class="extra-row">
-          <input type="text" value="${ex.nombre}" onchange="actualizarExtra(${idx},${exIdx},'nombre',this.value)">
+      ${extrasVisibles.map((ex)=>{
+        const exIdx = ex._exIdx;
+        const accionesExtra = ex.eliminado
+          ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarExtra(${idx},${exIdx})">↺</button>`
+          : `<button class="del" onclick="borrarExtra(${idx},${exIdx})">✕</button>`;
+        return `
+        <div class="extra-row ${ex.eliminado?'fila-eliminada':''}">
+          <input type="text" value="${ex.nombre}" ${ex.eliminado?'disabled':''} onchange="actualizarExtra(${idx},${exIdx},'nombre',this.value)">
           <span>$</span>
-          <input type="number" step="0.01" value="${ex.costo}" onchange="actualizarExtra(${idx},${exIdx},'costo',this.value)">
-          <button class="del" onclick="borrarExtra(${idx},${exIdx})">✕</button>
+          <input type="number" step="0.01" value="${ex.costo}" ${ex.eliminado?'disabled':''} onchange="actualizarExtra(${idx},${exIdx},'costo',this.value)">
+          ${accionesExtra}
         </div>
-      `).join('')}
+      `;}).join('')}
       <button class="btn secundario chico" style="margin-top:8px;" onclick="agregarExtra(${idx})">+ extra</button>
 
-      <div class="grid2" style="margin-top:14px;">
+      <div class="grid3" style="margin-top:14px;">
         <div class="stat"><div class="num">$${costoBase.toFixed(2)}</div><div class="lbl">Costo base/pza</div></div>
+        <div class="stat"><div class="num">$${fijosPza.toFixed(2)}</div><div class="lbl">M. obra + indirectos (auto)</div></div>
         <div class="stat"><div class="num">$${costoTotal.toFixed(2)}</div><div class="lbl">Costo total/pza</div></div>
       </div>
       <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
@@ -1437,21 +1610,102 @@ function renderProductos(){
     `;
   }).join('');
 
+  const ocultosCont = document.getElementById('ocultosProductosToggle');
+  if(ocultosCont){
+    const n = productos.filter(p=>p.oculto).length;
+    ocultosCont.innerHTML = n>0
+      ? `<button class="link-ocultos" onclick="toggleOcultosProductos()">${mostrarOcultosProductos ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${n})`}</button>`
+      : '';
+  }
+
   renderConteoProductos();
 
-  // los márgenes de los productos pudieron cambiar: refresca ganancias si está visible
+  // los márgenes de los productos pudieron cambiar: refresca ganancias y el resumen ejecutivo si están visibles
   if(document.getElementById('vista-ganancias')?.classList.contains('activa')) renderGanancias();
+  if(document.getElementById('vista-resumen')?.classList.contains('activa')) renderSaludEjecutivo();
 }
 
 /* ---------- Resumen ---------- */
 function renderResumen(){
-  const piezas = ventas.reduce((s,v)=>s+v.cantidad,0);
-  const ingresos = ventas.reduce((s,v)=>s+v.cantidad*v.precio,0);
-  const gastos = compras.reduce((s,c)=>s+c.costo,0);
+  const piezas = ventasActivas().reduce((s,v)=>s+v.cantidad,0);
+  const ingresos = ventasActivas().reduce((s,v)=>s+v.cantidad*v.precio,0);
+  const gastos = comprasActivas().reduce((s,c)=>s+c.costo,0);
   document.getElementById('r-piezas').textContent = piezas;
   document.getElementById('r-ingresos').textContent = '$'+ingresos.toLocaleString();
   document.getElementById('r-gastos').textContent = '$'+gastos.toLocaleString();
   document.getElementById('r-ganancia').textContent = '$'+(ingresos-gastos).toLocaleString();
+  renderSaludEjecutivo();
+}
+
+/* ---------- Análisis ejecutivo / salud del negocio ---------- */
+function renderSaludEjecutivo(){
+  const cont = document.getElementById('saludNegocio');
+  if(!cont) return;
+
+  const activas = ventasActivas();
+  if(activas.length===0){
+    cont.innerHTML = '<p class="vacio">Aún no hay ventas suficientes para evaluar la salud del negocio</p>';
+    return;
+  }
+
+  // punto de equilibrio dinámico: 10 lonches-equivalente al día, según el margen neto vigente del Lonche
+  const costoFijoDiario = 10 * margenNetoActual('Lonche');
+
+  const porDia = {};
+  activas.forEach(v=>{
+    porDia[v.fecha] = (porDia[v.fecha]||0) + v.cantidad*margenNetoVenta(v);
+  });
+
+  const fechaRef = Object.keys(porDia).sort().reverse()[0];
+  const {anio:anioRef, semana:semanaRef} = semanaISO(fechaRef);
+  const diasSemanaRef = Object.keys(porDia).filter(f=>{
+    const {anio,semana} = semanaISO(f);
+    return anio===anioRef && semana===semanaRef;
+  });
+  const gananciaSemanaRef = diasSemanaRef.reduce((s,f)=>s+porDia[f],0);
+  const diasCubiertos = diasSemanaRef.filter(f=>porDia[f] >= 0).length;
+  const totalDias = diasSemanaRef.length;
+
+  // semana anterior, para la tendencia
+  const lunRef = lunesDeSemana(fechaRef);
+  const lunAnterior = new Date(lunRef); lunAnterior.setDate(lunAnterior.getDate()-7);
+  const isoLunAnterior = lunAnterior.toISOString().slice(0,10);
+  const {anio:anioAnt, semana:semanaAnt} = semanaISO(isoLunAnterior);
+  const diasSemanaAnt = Object.keys(porDia).filter(f=>{
+    const {anio,semana} = semanaISO(f);
+    return anio===anioAnt && semana===semanaAnt;
+  });
+  const gananciaSemanaAnt = diasSemanaAnt.reduce((s,f)=>s+porDia[f],0);
+
+  let estado, etiqueta, icono;
+  if(gananciaSemanaRef <= 0){
+    estado='critico'; etiqueta='No rentable'; icono='🔴';
+  } else if(diasCubiertos < totalDias || gananciaSemanaRef < costoFijoDiario){
+    estado='alerta'; etiqueta='En alerta'; icono='🟡';
+  } else {
+    estado='saludable'; etiqueta='Saludable'; icono='🟢';
+  }
+
+  let tendenciaTxt;
+  if(diasSemanaAnt.length > 0){
+    const cambio = gananciaSemanaRef - gananciaSemanaAnt;
+    const pct = gananciaSemanaAnt !== 0 ? (cambio/Math.abs(gananciaSemanaAnt)*100) : null;
+    const flecha = cambio >= 0 ? '↑' : '↓';
+    tendenciaTxt = `${flecha}${pct!==null ? ' '+Math.abs(pct).toFixed(0)+'%' : ''} vs. semana anterior ($${gananciaSemanaAnt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})})`;
+  } else {
+    tendenciaTxt = 'sin datos de la semana anterior para comparar';
+  }
+
+  cont.innerHTML = `
+    <span class="salud-badge ${estado}">${icono} ${etiqueta}</span>
+    <p class="salud-frase">
+      Ganancia neta de la semana actual: <b>$${gananciaSemanaRef.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b> · ${tendenciaTxt}
+    </p>
+    <ul class="salud-lista">
+      <li>${diasCubiertos} de ${totalDias} días trabajados esta semana cubrieron el punto de equilibrio diario (~$${costoFijoDiario.toFixed(2)})</li>
+      <li>Punto de equilibrio actual: equivalente a ~10 lonches al día, según el margen neto vigente del Lonche</li>
+    </ul>
+  `;
 }
 
 let charts = {};
@@ -1459,7 +1713,7 @@ function dibujarGraficos(){
   const porDia = {};
   const porDiaTurno = {};
   const porProducto = {};
-  ventas.forEach(v=>{
+  ventasActivas().forEach(v=>{
     porDia[v.fecha] = (porDia[v.fecha]||0) + v.cantidad;
     if(!porDiaTurno[v.fecha]) porDiaTurno[v.fecha] = {'Mañana':0,'Tarde':0};
     porDiaTurno[v.fecha][v.turno] = (porDiaTurno[v.fecha][v.turno]||0) + v.cantidad;
