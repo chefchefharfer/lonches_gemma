@@ -433,6 +433,7 @@
         <div class="card">
           <h2>Historial de ventas por semana</h2>
           <p class="sub">Toca una semana para desplegarla; toca una venta para ver su desglose. Eliminar pide confirmación y no borra el dato, solo lo tacha.</p>
+          <button class="btn secundario chico" style="margin-bottom:12px;" onclick="completarTemperaturasFaltantes()">🌡️ Completar temperaturas faltantes</button>
           <div id="listaSemanas"></div>
           <div id="ocultosVentasToggle"></div>
         </div>
@@ -581,9 +582,8 @@
           <div class="chart-wrap"><canvas id="chartProducto" height="180"></canvas></div>
         </div>
 
-        <div class="card">
-          <button class="btn secundario" onclick="borrarTodo()">Borrar todos los datos</button>
-        </div>
+        <div id="graficosPorProducto"></div>
+
       </section>
 
     </main>
@@ -699,6 +699,81 @@ const PRODUCTOS_SEMILLA = [
 ];
 
 function hoyISO(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------- Clima: temperatura del turno (Open-Meteo, sin API key) ----------
+   Mañana = ventas de 8:00 a 9:30 -> promedio de las 8:00 y 9:00
+   Tarde  = ventas de 15:00 a 16:30 -> promedio de las 15:00 y 16:00 */
+const NEGOCIO_LAT = 20.8167;
+const NEGOCIO_LON = -102.7614;
+const HORAS_TURNO = { 'Mañana':[8,9], 'Tarde':[15,16] };
+const cacheTemperatura = {};
+
+async function fetchConTimeout(url, ms=6000){
+  const controller = new AbortController();
+  const id = setTimeout(()=>controller.abort(), ms);
+  try{ return await fetch(url, {signal: controller.signal}); }
+  finally{ clearTimeout(id); }
+}
+
+async function consultarTemperaturaHoraria(base){
+  const res = await fetchConTimeout(base);
+  if(!res.ok) throw new Error('respuesta no OK');
+  const data = await res.json();
+  if(!data.hourly || !data.hourly.time) throw new Error('sin datos horarios');
+  return data;
+}
+
+async function obtenerTemperatura(fecha, turno){
+  const clave = fecha+'|'+turno;
+  if(cacheTemperatura[clave] !== undefined) return cacheTemperatura[clave];
+
+  const horas = HORAS_TURNO[turno] || [8,9];
+  const params = `latitude=${NEGOCIO_LAT}&longitude=${NEGOCIO_LON}&start_date=${fecha}&end_date=${fecha}&hourly=temperature_2m&timezone=America%2FMexico_City`;
+
+  let data = null;
+  try{
+    data = await consultarTemperaturaHoraria(`https://api.open-meteo.com/v1/forecast?${params}`);
+  }catch(e1){
+    try{
+      data = await consultarTemperaturaHoraria(`https://archive-api.open-meteo.com/v1/archive?${params}`);
+    }catch(e2){
+      data = null;
+    }
+  }
+
+  let resultado = null;
+  if(data){
+    const valores = horas.map(h=>{
+      const idx = data.hourly.time.indexOf(`${fecha}T${String(h).padStart(2,'0')}:00`);
+      return idx>=0 ? data.hourly.temperature_2m[idx] : null;
+    }).filter(v=>v!==null && v!==undefined);
+    if(valores.length>0) resultado = Math.round((valores.reduce((s,v)=>s+v,0)/valores.length)*10)/10;
+  }
+
+  cacheTemperatura[clave] = resultado;
+  return resultado;
+}
+
+async function completarTemperaturasFaltantes(){
+  const faltantes = ventas.filter(v=>!v.eliminado && (v.tempC===undefined || v.tempC===null));
+  if(faltantes.length===0){ toast('No hay ventas sin temperatura'); return; }
+
+  const combos = Array.from(new Set(faltantes.map(v=>v.fecha+'|'+v.turno)));
+  toast(`Consultando clima de ${combos.length} turno(s)...`);
+
+  for(const combo of combos){
+    const [fecha,turno] = combo.split('|');
+    const temp = await obtenerTemperatura(fecha, turno);
+    if(temp !== null){
+      ventas.forEach(v=>{
+        if(v.fecha===fecha && v.turno===turno && (v.tempC===undefined || v.tempC===null)) v.tempC = temp;
+      });
+    }
+  }
+  await guardar('ventas', ventas);
+  renderTodo();
+  toast('Temperaturas actualizadas ✓');
+}
 
 function fmtFecha(iso){
   const [y,m,d] = iso.split('-');
@@ -912,6 +987,7 @@ async function registrarTurno(){
   const fecha = document.getElementById('t-fecha').value || hoyISO();
   const lista = productosVendibles();
   let algo = false;
+  const nuevas = [];
 
   lista.forEach((p,idx)=>{
     const llevaste = parseInt(document.getElementById(`t-llevaste-${idx}`).value)||0;
@@ -921,7 +997,7 @@ async function registrarTurno(){
     let vendiste = llevaste - sobraron - cortesia;
     if(vendiste < 0) vendiste = 0;
     algo = true;
-    ventas.push({
+    nuevas.push({
       fecha, turno, producto:p.nombre,
       llevadas:llevaste, sobrantes:sobraron, cortesias:cortesia,
       cantidad:vendiste, precio:p.precio,
@@ -931,6 +1007,10 @@ async function registrarTurno(){
 
   if(!algo){ toast('Pon cuántas piezas llevaste de al menos un producto'); return; }
 
+  const temp = await obtenerTemperatura(fecha, turno);
+  if(temp !== null) nuevas.forEach(v => v.tempC = temp);
+
+  ventas.push(...nuevas);
   await guardar('ventas', ventas);
 
   lista.forEach((p,idx)=>{
@@ -944,7 +1024,7 @@ async function registrarTurno(){
   semanasAbiertas.add(anio+'-'+semana);
   semanasGananciasAbiertas.add(anio+'-'+semana);
 
-  toast('Turno registrado ✓');
+  toast(temp !== null ? `Turno registrado ✓ · ${temp}°C` : 'Turno registrado ✓');
   renderTodo();
 }
 
@@ -1082,6 +1162,7 @@ function renderVentas(){
                     <div class="item-detalle">
                       ${v.llevadas!==undefined ? `Llevaste: <b>${v.llevadas}</b> · Sobraron: <b>${v.sobrantes||0}</b> · Cortesía: <b>${v.cortesias||0}</b><br>` : ''}
                       Vendiste: <b>${v.cantidad}</b> · Precio unitario: <b>$${v.precio}</b> · Total: <b>$${(v.cantidad*v.precio).toLocaleString()}</b>
+                      ${(v.tempC!==undefined && v.tempC!==null) ? `<br>Temperatura del turno: <b>${v.tempC}°C</b>` : ''}
                     </div>
                   ` : ''}
                 </div>
@@ -1784,6 +1865,76 @@ function dibujarGraficos(){
     data:{ labels:Object.keys(porProducto), datasets:[{ data:Object.values(porProducto), backgroundColor:coloresProd }] },
     options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
   });
+
+  dibujarGraficosPorProducto();
+}
+
+/* ---------- Un gráfico de barras (Mañana vs. Tarde por día) para cada producto ---------- */
+let chartsProducto = {};
+function dibujarGraficosPorProducto(){
+  const cont = document.getElementById('graficosPorProducto');
+  if(!cont) return;
+
+  Object.values(chartsProducto).forEach(c=>c.destroy());
+  chartsProducto = {};
+
+  const activas = ventasActivas();
+  const nombres = Array.from(new Set(activas.map(v=>v.producto))).sort((a,b)=>{
+    if(a==='Lonche') return -1;
+    if(b==='Lonche') return 1;
+    return a.localeCompare(b);
+  });
+
+  if(nombres.length===0){ cont.innerHTML = ''; return; }
+
+  const paleta = { salsa:'#C6362A', naranjaClaro:'#F2A459' };
+
+  cont.innerHTML = nombres.map(nombre=>{
+    const id = 'chartProd_' + nombre.replace(/[^a-zA-Z0-9]/g,'_');
+    return `
+      <div class="card">
+        <h2>${nombre} · Mañana vs. Tarde</h2>
+        <p class="sub">Piezas vendidas por día, comparando el turno de la mañana contra el de la tarde</p>
+        <div class="chart-wrap"><canvas id="${id}" height="180"></canvas></div>
+      </div>
+    `;
+  }).join('');
+
+  nombres.forEach(nombre=>{
+    const ventasProd = activas.filter(v=>v.producto===nombre);
+    const porDiaTurnoProd = {};
+    ventasProd.forEach(v=>{
+      if(!porDiaTurnoProd[v.fecha]) porDiaTurnoProd[v.fecha] = {'Mañana':0,'Tarde':0};
+      porDiaTurnoProd[v.fecha][v.turno] = (porDiaTurnoProd[v.fecha][v.turno]||0) + v.cantidad;
+    });
+    const diasProd = Object.keys(porDiaTurnoProd).sort();
+    const id = 'chartProd_' + nombre.replace(/[^a-zA-Z0-9]/g,'_');
+    const canvas = document.getElementById(id);
+    if(!canvas) return;
+
+    chartsProducto[nombre] = new Chart(canvas, {
+      type:'bar',
+      data:{
+        labels: diasProd.map(fmtFecha),
+        datasets:[
+          {
+            label:'Mañana',
+            data: diasProd.map(d=>porDiaTurnoProd[d]['Mañana']||0),
+            backgroundColor: paleta.naranjaClaro, borderRadius:4, maxBarThickness:28
+          },
+          {
+            label:'Tarde',
+            data: diasProd.map(d=>porDiaTurnoProd[d]['Tarde']||0),
+            backgroundColor: paleta.salsa, borderRadius:4, maxBarThickness:28
+          }
+        ]
+      },
+      options:{
+        plugins:{ legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}} },
+        scales:{ y:{beginAtZero:true, ticks:{stepSize:5}} }
+      }
+    });
+  });
 }
 
 function renderTodo(){
@@ -1791,17 +1942,6 @@ function renderTodo(){
   renderCompras();
   renderResumen();
   renderGanancias();
-}
-
-async function borrarTodo(){
-  if(!confirm('¿Seguro que quieres borrar todos los datos guardados? Esta acción no se puede deshacer.')) return;
-  ventas = [];
-  compras = [];
-  await guardar('ventas', ventas);
-  await guardar('compras', compras);
-  renderTodo();
-  dibujarGraficos();
-  toast('Datos borrados');
 }
 
 init();
