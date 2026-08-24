@@ -502,16 +502,21 @@
           <p class="sub">Anota cuánto llevaste de cada producto; al final del turno pon lo que sobró y lo que regalaste de cortesía — lo vendido se calcula solo</p>
           <div class="grid2">
             <div>
-              <label>Turno</label>
-              <select id="t-turno">
-                <option value="Mañana">Mañana</option>
-                <option value="Tarde">Tarde</option>
+              <label>Canal / turno</label>
+              <select id="t-turno" onchange="alCambiarTurno()">
+                <option value="Mañana">Puesto ambulante · Mañana</option>
+                <option value="Tarde">Puesto ambulante · Tarde</option>
+                <option value="Redes sociales">Redes sociales</option>
               </select>
             </div>
             <div>
               <label>Fecha</label>
               <input type="date" id="t-fecha">
             </div>
+          </div>
+          <div id="t-hora-wrap" style="display:none;">
+            <label>Hora de la venta (opcional)</label>
+            <input type="time" id="t-hora">
           </div>
 
           <div id="listaConteoProductos"></div>
@@ -701,6 +706,12 @@
         <div class="card">
           <h2>Mañana vs. Tarde</h2>
           <div class="chart-wrap"><canvas id="chartTurno" height="180"></canvas></div>
+        </div>
+
+        <div class="card">
+          <h2>Puesto ambulante vs. Redes sociales</h2>
+          <p class="sub">Piezas vendidas por canal, del total acumulado</p>
+          <div class="chart-wrap"><canvas id="chartCanal" height="180"></canvas></div>
         </div>
 
         <div class="card">
@@ -1025,6 +1036,7 @@ async function init(){
   document.getElementById('t-fecha').value = hoyISO();
   document.getElementById('c-fecha').value = hoyISO();
   document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long', day:'numeric', month:'long'});
+  alCambiarTurno();
 
   ventas = await cargar('ventas', null);
   if(ventas === null){
@@ -1425,6 +1437,12 @@ function actualizarResumenConteo(idx){
   document.getElementById(`t-resumen-${idx}`).textContent = `Vendiste: ${vendiste} · $${(vendiste*p.precio).toLocaleString()}`;
 }
 
+function alCambiarTurno(){
+  const turno = document.getElementById('t-turno').value;
+  const wrap = document.getElementById('t-hora-wrap');
+  if(wrap) wrap.style.display = (turno==='Redes sociales') ? 'block' : 'none';
+}
+
 /* ---------- Navegación ---------- */
 function cambiarVista(v){
   document.querySelectorAll('.vista').forEach(s=>s.classList.remove('activa'));
@@ -1458,6 +1476,8 @@ function cerrarToast(){
 async function registrarTurno(){
   const turno = document.getElementById('t-turno').value;
   const fecha = document.getElementById('t-fecha').value || hoyISO();
+  const canal = turno==='Redes sociales' ? 'Redes sociales' : 'Puesto ambulante';
+  const hora = turno==='Redes sociales' ? (document.getElementById('t-hora').value || null) : null;
   const lista = productosVendibles();
   let algo = false;
   const nuevas = [];
@@ -1470,17 +1490,21 @@ async function registrarTurno(){
     let vendiste = llevaste - sobraron - cortesia;
     if(vendiste < 0) vendiste = 0;
     algo = true;
-    nuevas.push({
-      fecha, turno, producto:p.nombre,
+    const venta = {
+      fecha, turno, canal, producto:p.nombre,
       llevadas:llevaste, sobrantes:sobraron, cortesias:cortesia,
       cantidad:vendiste, precio:p.precio,
       margenNeto: margenNetoActual(p.nombre)
-    });
+    };
+    if(hora) venta.horaVenta = hora;
+    nuevas.push(venta);
   });
 
   if(!algo){ toast('Pon cuántas piezas llevaste de al menos un producto'); return; }
 
-  const temp = await obtenerTemperatura(fecha, turno);
+  // El clima del turno solo aplica al puesto ambulante (horario fijo mañana/tarde);
+  // las ventas por redes pueden pasar a cualquier hora, así que se omite esa consulta.
+  const temp = canal==='Puesto ambulante' ? await obtenerTemperatura(fecha, turno) : null;
   if(temp !== null) nuevas.forEach(v => v.tempC = temp);
 
   ventas.push(...nuevas);
@@ -1492,6 +1516,7 @@ async function registrarTurno(){
     document.getElementById(`t-cortesia-${idx}`).value = 0;
     actualizarResumenConteo(idx);
   });
+  if(document.getElementById('t-hora')) document.getElementById('t-hora').value = '';
 
   const {anio,semana} = semanaISO(fecha);
   semanasAbiertas.add(anio+'-'+semana);
@@ -1633,6 +1658,7 @@ function renderVentas(){
                   </div>
                   ${detalleAbierto ? `
                     <div class="item-detalle">
+                      Canal: <b>${v.canal || (v.turno==='Redes sociales' ? 'Redes sociales' : 'Puesto ambulante')}</b>${v.horaVenta ? ` · Hora: <b>${v.horaVenta}</b>` : ''}<br>
                       ${v.llevadas!==undefined ? `Llevaste: <b>${v.llevadas}</b> · Sobraron: <b>${v.sobrantes||0}</b> · Cortesía: <b>${v.cortesias||0}</b><br>` : ''}
                       Vendiste: <b>${v.cantidad}</b> · Precio unitario: <b>$${v.precio}</b> · Total: <b>$${(v.cantidad*v.precio).toLocaleString()}</b>
                       ${(v.tempC!==undefined && v.tempC!==null) ? `<br>Temperatura del turno: <b>${v.tempC}°C</b>` : ''}
@@ -2299,11 +2325,14 @@ function dibujarGraficos(){
   const porDia = {};
   const porDiaTurno = {};
   const porProducto = {};
+  const porCanal = {'Puesto ambulante':0, 'Redes sociales':0};
   ventasActivas().forEach(v=>{
     porDia[v.fecha] = (porDia[v.fecha]||0) + v.cantidad;
     if(!porDiaTurno[v.fecha]) porDiaTurno[v.fecha] = {'Mañana':0,'Tarde':0};
     porDiaTurno[v.fecha][v.turno] = (porDiaTurno[v.fecha][v.turno]||0) + v.cantidad;
     porProducto[v.producto] = (porProducto[v.producto]||0) + v.cantidad;
+    const canal = v.canal || (v.turno==='Redes sociales' ? 'Redes sociales' : 'Puesto ambulante');
+    porCanal[canal] = (porCanal[canal]||0) + v.cantidad;
   });
   const diasOrdenados = Object.keys(porDia).sort();
 
@@ -2346,6 +2375,16 @@ function dibujarGraficos(){
   charts.producto = new Chart(document.getElementById('chartProducto'), {
     type:'doughnut',
     data:{ labels:Object.keys(porProducto), datasets:[{ data:Object.values(porProducto), backgroundColor:coloresProd }] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
+  });
+
+  if(charts.canal) charts.canal.destroy();
+  charts.canal = new Chart(document.getElementById('chartCanal'), {
+    type:'doughnut',
+    data:{
+      labels: Object.keys(porCanal),
+      datasets:[{ data:Object.values(porCanal), backgroundColor:[paleta.cafe, paleta.naranja] }]
+    },
     options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
   });
 
