@@ -195,6 +195,85 @@
 
   .vacio{text-align:center; color:var(--text-2); font-size:13px; padding:14px 0;}
 
+  /* ---------- Inventario ---------- */
+  .nav-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:17px; height:17px; padding:0 4px; border-radius:999px;
+    background:var(--rojo-neg); color:#fff; font-size:10px; font-weight:800; margin-left:auto;
+  }
+  .alerta-stock{
+    background:var(--rojo-bg); border:1px solid #F3C9C1; border-radius:10px;
+    padding:12px 14px; font-size:13px; color:var(--rojo-neg); margin-bottom:14px; line-height:1.5;
+  }
+  .alerta-stock b{display:block; margin-bottom:2px; font-size:13.5px;}
+
+  /* Alacena: cuadrícula compacta de cajitas */
+  .inv-grupo-titulo{
+    font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--text-2); margin:16px 0 8px 0;
+  }
+  .inv-grupo-titulo:first-child{margin-top:0;}
+  .inv-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(100px,1fr)); gap:9px;
+  }
+  .inv-box{
+    position:relative; text-align:left; cursor:pointer;
+    border:1.5px solid var(--border); border-radius:10px; background:var(--card-bg);
+    padding:10px 10px 9px; min-height:74px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    font-family:inherit; transition:transform 0.08s ease;
+  }
+  .inv-box:active{transform:scale(0.96);}
+  .inv-box.verde{border-color:#CFE9DB;}
+  .inv-box.amarillo{border-color:#F1DDA6; background:#FFFDF7;}
+  .inv-box.rojo{border-color:#F3C9C1; background:#FFFBFA;}
+  .inv-box.eliminado{opacity:0.45;}
+  .inv-box-dot{width:9px; height:9px; border-radius:50%; position:absolute; top:9px; right:9px; flex-shrink:0;}
+  .inv-box-dot.verde{background:var(--verde);}
+  .inv-box-dot.amarillo{background:#D69A1E;}
+  .inv-box-dot.rojo{background:var(--rojo-neg);}
+  .inv-box-dot.gris{background:#BFC7C2;}
+  .inv-box-nombre{
+    font-size:11.5px; font-weight:700; line-height:1.24; padding-right:14px;
+    overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  }
+  .inv-box.eliminado .inv-box-nombre{text-decoration:line-through;}
+  .inv-box-stock{font-size:16.5px; font-weight:800; margin-top:6px; line-height:1.1;}
+  .inv-box-stock span{font-size:10px; font-weight:600; color:var(--text-2); margin-left:2px;}
+
+  /* Modal de detalle al tocar una cajita */
+  .inv-modal-overlay{
+    position:fixed; inset:0; background:rgba(20,30,25,0.45); z-index:200;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .inv-modal-overlay.abierto{display:flex;}
+  .inv-modal{
+    background:var(--card-bg); width:100%; max-width:520px;
+    border-radius:16px 16px 0 0; padding:18px 20px calc(18px + env(safe-area-inset-bottom));
+    max-height:88vh; overflow-y:auto;
+  }
+  .inv-modal-cierre{
+    display:block; width:36px; height:4px; border-radius:99px; background:var(--border);
+    margin:0 auto 14px auto; border:none; padding:0;
+  }
+  .inv-modal-encabezado{display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:4px;}
+  .inv-modal-nombre{font-weight:700; font-size:16px; flex:1; border:none; background:none; padding:2px 0;}
+  .inv-modal-stock-linea{display:flex; align-items:baseline; justify-content:space-between; margin:8px 0 4px 0;}
+  .inv-modal-stock-num{font-size:24px; font-weight:800;}
+  .inv-modal-stock-num.verde{color:var(--verde);}
+  .inv-modal-stock-num.amarillo{color:#B8821A;}
+  .inv-modal-stock-num.rojo{color:var(--rojo-neg);}
+  .inv-barra{height:6px; border-radius:99px; background:var(--chip-bg); overflow:hidden; margin-bottom:14px;}
+  .inv-barra-fill{height:100%; border-radius:99px;}
+  .inv-campos{display:grid; grid-template-columns:repeat(auto-fit, minmax(110px,1fr)); gap:8px 10px; margin-top:8px;}
+  .inv-campos label{font-size:10.5px;}
+  .inv-campos input, .inv-campos select{padding:7px 9px; font-size:12.5px;}
+  @media (min-width:768px){
+    .inv-modal-overlay{align-items:center;}
+    .inv-modal{border-radius:16px; max-height:80vh;}
+    .inv-modal-cierre{display:none;}
+  }
+
   .receta-item{display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--border); gap:8px;}
   .receta-item input[type=text]{padding:6px 8px; font-size:12.5px; flex:1;}
   .receta-item input[type=number]{padding:6px 8px; font-size:12.5px; width:80px; text-align:right;}
@@ -303,10 +382,16 @@
     font-size:9.5px;
     font-weight:600;
     font-family:inherit;
+    position:relative;
   }
   nav.tabs button .ico{display:block; font-size:17px; margin-bottom:1px;}
   nav.tabs button.activo{color:var(--salsa);}
   nav.tabs button.activo .ico{transform:scale(1.1);}
+  nav.tabs button .nav-dot{
+    position:absolute; top:4px; right:calc(50% - 15px);
+    width:8px; height:8px; border-radius:50%; background:var(--rojo-neg);
+    border:1.5px solid #fff; display:none;
+  }
 
   nav.sidebar{display:none;}
 
@@ -379,6 +464,7 @@
     <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
     <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingredientes</button>
     <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Productos</button>
+    <button class="tab-btn" data-vista="inventario" onclick="cambiarVista('inventario')"><span class="ico">📦</span>Inventario<span class="nav-badge" id="navBadgeInvSidebar" style="display:none;"></span></button>
     <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
   </nav>
 
@@ -463,6 +549,10 @@
           <h2>Registrar compra / insumo</h2>
           <label>Insumo</label>
           <input type="text" id="c-nombre" placeholder="Ej. Carne de cerdo">
+          <label>Vincular a inventario (opcional)</label>
+          <select id="c-inventario" onchange="alVincularCompraInventario()">
+            <option value="">Ninguno — no afecta el inventario</option>
+          </select>
           <div class="grid3">
             <div>
               <label>Cantidad</label>
@@ -474,7 +564,9 @@
                 <option value="kg">kg</option>
                 <option value="g">g</option>
                 <option value="L">L</option>
+                <option value="ml">ml</option>
                 <option value="pza">pza</option>
+                <option value="paquete">paquete</option>
               </select>
             </div>
             <div>
@@ -549,6 +641,28 @@
         </div>
       </section>
 
+      <!-- INVENTARIO -->
+      <section id="vista-inventario" class="vista">
+        <div class="card">
+          <h2>Inventario</h2>
+          <p class="sub">
+            Tu alacena virtual. Verde = hay de sobra, amarillo = se está acercando al límite, rojo = ya no hay o está por acabarse.
+            Toca una cajita para ver y ajustar su detalle.
+          </p>
+          <div id="alertaInventario"></div>
+          <div id="listaInventario" class="inv-grid"></div>
+          <div id="ocultosInventarioToggle"></div>
+          <button class="btn secundario" style="margin-top:14px;" onclick="agregarInsumoInventario()">+ Agregar insumo</button>
+        </div>
+      </section>
+
+      <div class="inv-modal-overlay" id="invModalOverlay" onclick="if(event.target===this) cerrarDetalleInsumo()">
+        <div class="inv-modal">
+          <button class="inv-modal-cierre" onclick="cerrarDetalleInsumo()" aria-label="Cerrar"></button>
+          <div id="invModalContenido"></div>
+        </div>
+      </div>
+
       <!-- RESUMEN -->
       <section id="vista-resumen" class="vista">
         <div class="card">
@@ -599,6 +713,7 @@
   <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
   <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingr.</button>
   <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Prod.</button>
+  <button class="tab-btn" data-vista="inventario" onclick="cambiarVista('inventario')"><span class="ico">📦</span>Invent.<span class="nav-dot" id="navDotInvMobile"></span></button>
   <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
 </nav>
 
@@ -654,6 +769,7 @@ let ventas = [];
 let compras = [];
 let ingredientes = [];
 let productos = [];
+let inventario = [];
 let semanasAbiertas = new Set();
 let diasAbiertos = new Set();
 let turnosAbiertos = new Set();
@@ -667,11 +783,13 @@ let mostrarOcultosVentas = false;
 let mostrarOcultosCompras = false;
 let mostrarOcultosIngredientes = false;
 let mostrarOcultosProductos = false;
+let mostrarOcultosInventario = false;
 
 function ventasActivas(){ return ventas.filter(v=>!v.eliminado); }
 function comprasActivas(){ return compras.filter(c=>!c.eliminado); }
 function ingredientesActivos(){ return ingredientes.filter(ing=>!ing.eliminado); }
 function productosActivos(){ return productos.filter(p=>!p.eliminado); }
+function inventarioActivo(){ return inventario.filter(i=>!i.eliminado); }
 
 /* ---------- Datos semilla (solo si no hay nada guardado) ---------- */
 const VENTAS_SEMILLA = [
@@ -716,6 +834,36 @@ const PRODUCTOS_SEMILLA = [
     ]
   }
 ];
+
+/* Inventario: números de ejemplo para arrancar — AJÚSTALOS a tu realidad
+   (unidad, consumo por pieza, stock inicial y punto de reorden) desde la
+   pestaña Inventario. aplicaA: 'lonche' | 'pasteles' (todo lo que no sea
+   Lonche) | 'todos'. grupo: solo controla en qué sección visual aparece
+   la cajita — 'Aderezo' | 'Salsa' | 'Lonche y empaque' | 'Producto terminado y empaque'. */
+function inventarioSemilla(){
+  const hoy = hoyISO();
+  return [
+    {nombre:'Birote',          grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'pza',     unidadConteo:'tira', equivalencia:2,    consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:6},
+    {nombre:'Carne de cerdo',  grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
+    {nombre:'Cebolla',         grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:10,   stockInicial:0, fechaInicial:hoy, puntoReorden:200},
+    {nombre:'Ajo',             grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:3,    stockInicial:0, fechaInicial:hoy, puntoReorden:100},
+    {nombre:'Sal',             grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:5,    stockInicial:0, fechaInicial:hoy, puntoReorden:200},
+    {nombre:'Contenedores',    grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:25,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:15},
+
+    {nombre:'Mayonesa',        grupo:'Aderezo',                       aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:20,   stockInicial:0, fechaInicial:hoy, puntoReorden:300},
+    {nombre:'Crema',           grupo:'Aderezo',                       aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:20,   stockInicial:0, fechaInicial:hoy, puntoReorden:300},
+    {nombre:'Mostaza',         grupo:'Aderezo',                       aplicaA:'lonche',   unidadCompra:'L',       unidadConteo:'ml',   equivalencia:1000, consumoPorPieza:5,    stockInicial:0, fechaInicial:hoy, puntoReorden:100},
+
+    {nombre:'Jitomate',        grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
+    {nombre:'Puré de tomate',  grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:300},
+    {nombre:'Laurel',          grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'paquete', unidadConteo:'hoja', equivalencia:30,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:10},
+    {nombre:'Pimienta',        grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:0.5,  stockInicial:0, fechaInicial:hoy, puntoReorden:20},
+    {nombre:'Clavo',           grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:0.5,  stockInicial:0, fechaInicial:hoy, puntoReorden:20},
+
+    {nombre:'Servilletas',     grupo:'Producto terminado y empaque',  aplicaA:'todos',    unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:100,  consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:50},
+    {nombre:'Cucharas',        grupo:'Producto terminado y empaque',  aplicaA:'pasteles', unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:50,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:20},
+  ];
+}
 
 function hoyISO(){ return new Date().toISOString().slice(0,10); }
 
@@ -905,6 +1053,9 @@ async function init(){
   productos = await cargar('productos', null);
   if(productos === null){ productos = PRODUCTOS_SEMILLA; await guardar('productos', productos); }
 
+  inventario = await cargar('inventario', null);
+  if(inventario === null){ inventario = inventarioSemilla(); await guardar('inventario', inventario); }
+
   // abrir la semana mas reciente por default (ventas, ganancias y compras)
   if(ventas.length){
     const masReciente = ventas.map(v=>v.fecha).sort().reverse()[0];
@@ -924,12 +1075,268 @@ async function init(){
   renderConteoProductos();
   renderIngredientes();
   renderProductos();
+  renderInventario();
   renderTodo();
 }
 
 function productosVendibles(){
   return [{nombre:'Lonche', precio: parseFloat(document.getElementById('ing-precio')?.value || 30)}]
     .concat(productosActivos().map(p=>({nombre:p.nombre, precio:p.precioVenta})));
+}
+
+/* ---------- Inventario ---------- */
+function aplicaProducto(aplicaA, producto){
+  if(aplicaA==='todos') return true;
+  if(aplicaA==='lonche') return producto==='Lonche';
+  if(aplicaA==='pasteles') return producto!=='Lonche';
+  return false;
+}
+
+function stockCalculado(item, idx){
+  const desde = item.fechaInicial || '0000-00-00';
+  const entradas = comprasActivas()
+    .filter(c => c.inventarioIdx===idx && c.fecha>=desde)
+    .reduce((s,c) => s + (parseFloat(c.cantidad)||0) * (parseFloat(item.equivalencia)||1), 0);
+  const salidas = ventasActivas()
+    .filter(v => v.fecha>=desde && aplicaProducto(item.aplicaA, v.producto))
+    .reduce((s,v) => s + v.cantidad * (parseFloat(item.consumoPorPieza)||0), 0);
+  return (parseFloat(item.stockInicial)||0) + entradas - salidas;
+}
+
+function estadoStock(item, stock){
+  const reorden = parseFloat(item.puntoReorden)||0;
+  const zonaAmarilla = reorden * 1.5;
+  if(stock <= reorden) return 'rojo';
+  if(stock <= zonaAmarilla) return 'amarillo';
+  return 'verde';
+}
+
+async function agregarInsumoInventario(){
+  inventario.push({
+    nombre:'Nuevo insumo', grupo:'Lonche y empaque', aplicaA:'lonche',
+    unidadCompra:'kg', unidadConteo:'g', equivalencia:1000,
+    consumoPorPieza:0, stockInicial:0, fechaInicial: hoyISO(), puntoReorden:0
+  });
+  await guardar('inventario', inventario);
+  renderInventario();
+  abrirDetalleInsumo(inventario.length-1);
+}
+
+async function actualizarInsumoInventario(idx, campo, valor){
+  const numericos = ['equivalencia','consumoPorPieza','puntoReorden','stockInicial'];
+  inventario[idx][campo] = numericos.includes(campo) ? (parseFloat(valor)||0) : valor;
+  await guardar('inventario', inventario);
+  renderInventario();
+  if(document.getElementById('invModalOverlay').classList.contains('abierto')) renderDetalleInsumo(idx);
+}
+
+async function borrarInsumoInventario(idx){
+  if(!confirm('¿Eliminar este insumo del inventario? No se pierde: queda tachado y lo puedes restaurar después.')) return;
+  inventario[idx].eliminado = true;
+  await guardar('inventario', inventario);
+  cerrarDetalleInsumo();
+  renderInventario();
+  toast('Insumo eliminado', `restaurarInsumoInventario(${idx})`);
+}
+async function restaurarInsumoInventario(idx){
+  inventario[idx].eliminado = false;
+  inventario[idx].oculto = false;
+  await guardar('inventario', inventario);
+  renderInventario();
+  if(document.getElementById('invModalOverlay').classList.contains('abierto')) renderDetalleInsumo(idx);
+}
+async function ocultarInsumoInventario(idx){
+  inventario[idx].oculto = true;
+  await guardar('inventario', inventario);
+  cerrarDetalleInsumo();
+  renderInventario();
+}
+function toggleOcultosInventario(){
+  mostrarOcultosInventario = !mostrarOcultosInventario;
+  renderInventario();
+}
+
+function actualizarDropdownInventarioCompras(){
+  const sel = document.getElementById('c-inventario');
+  if(!sel) return;
+  const valorActual = sel.value;
+  const activos = inventario.map((item,idx)=>({...item,idx})).filter(item=>!item.eliminado);
+  sel.innerHTML = '<option value="">Ninguno — no afecta el inventario</option>' +
+    activos.map(item=>`<option value="${item.idx}">${item.nombre} (compras en ${item.unidadCompra||'?'})</option>`).join('');
+  if([...sel.options].some(o=>o.value===valorActual)) sel.value = valorActual;
+}
+
+function alVincularCompraInventario(){
+  const sel = document.getElementById('c-inventario');
+  if(!sel || sel.value==='') return;
+  const item = inventario[parseInt(sel.value)];
+  if(!item) return;
+  document.getElementById('c-nombre').value = item.nombre;
+  const unidadSel = document.getElementById('c-unidad');
+  const opciones = [...unidadSel.options].map(o=>o.value);
+  if(item.unidadCompra && opciones.includes(item.unidadCompra)) unidadSel.value = item.unidadCompra;
+}
+
+/* ---------- Alacena: cuadrícula compacta ---------- */
+function renderInventario(){
+  const cont = document.getElementById('listaInventario');
+  const alertaCont = document.getElementById('alertaInventario');
+  if(!cont) return;
+
+  const bajos = inventario
+    .map((item,idx)=>({...item, idx, stock: stockCalculado(item, idx)}))
+    .filter(item => !item.eliminado && item.stock <= (parseFloat(item.puntoReorden)||0));
+
+  if(alertaCont){
+    alertaCont.innerHTML = bajos.length>0 ? `
+      <div class="alerta-stock">
+        <b>⚠️ ${bajos.length} insumo${bajos.length>1?'s':''} por agotarse</b>
+        ${bajos.map(b=>`${b.nombre}: ${b.stock.toLocaleString(undefined,{maximumFractionDigits:1})} ${b.unidadConteo||''} restantes`).join(' · ')}
+      </div>
+    ` : '';
+  }
+
+  const badgeSidebar = document.getElementById('navBadgeInvSidebar');
+  if(badgeSidebar){
+    if(bajos.length>0){ badgeSidebar.textContent = bajos.length; badgeSidebar.style.display = 'inline-flex'; }
+    else badgeSidebar.style.display = 'none';
+  }
+  const dotMobile = document.getElementById('navDotInvMobile');
+  if(dotMobile) dotMobile.style.display = bajos.length>0 ? 'block' : 'none';
+
+  const visibles = inventario.map((item,idx)=>({...item,idx})).filter(item=>!item.oculto || mostrarOcultosInventario);
+
+  if(visibles.length===0){
+    cont.innerHTML = '<p class="vacio">Sin insumos en el inventario todavía</p>';
+  } else {
+    const ORDEN_GRUPOS = ['Aderezo','Salsa','Lonche y empaque','Producto terminado y empaque'];
+    const grupos = {};
+    visibles.forEach(item=>{
+      const g = item.grupo || 'Lonche y empaque';
+      if(!grupos[g]) grupos[g] = [];
+      grupos[g].push(item);
+    });
+    const clavesGrupos = Object.keys(grupos).sort((a,b)=>{
+      const ia = ORDEN_GRUPOS.indexOf(a), ib = ORDEN_GRUPOS.indexOf(b);
+      return (ia<0?99:ia) - (ib<0?99:ib);
+    });
+
+    cont.innerHTML = clavesGrupos.map(g=>{
+      const cajasHtml = grupos[g].map(item=>{
+        const idx = item.idx;
+        const stock = stockCalculado(item, idx);
+        const estado = item.eliminado ? 'gris' : estadoStock(item, stock);
+        return `
+          <button class="inv-box ${item.eliminado?'eliminado':estado}" onclick="abrirDetalleInsumo(${idx})">
+            <span class="inv-box-dot ${estado}"></span>
+            <span class="inv-box-nombre">${item.nombre}</span>
+            <span class="inv-box-stock">${stock.toLocaleString(undefined,{maximumFractionDigits:1})}<span>${item.unidadConteo||''}</span></span>
+          </button>
+        `;
+      }).join('');
+      return `
+        <div class="inv-grupo-titulo">${g}</div>
+        <div class="inv-grid">${cajasHtml}</div>
+      `;
+    }).join('');
+  }
+
+  const ocultosCont = document.getElementById('ocultosInventarioToggle');
+  if(ocultosCont){
+    const n = inventario.filter(i=>i.oculto).length;
+    ocultosCont.innerHTML = n>0
+      ? `<button class="link-ocultos" onclick="toggleOcultosInventario()">${mostrarOcultosInventario ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${n})`}</button>`
+      : '';
+  }
+
+  actualizarDropdownInventarioCompras();
+}
+
+/* ---------- Modal de detalle de un insumo ---------- */
+function abrirDetalleInsumo(idx){
+  renderDetalleInsumo(idx);
+  document.getElementById('invModalOverlay').classList.add('abierto');
+}
+function cerrarDetalleInsumo(){
+  document.getElementById('invModalOverlay').classList.remove('abierto');
+}
+function renderDetalleInsumo(idx){
+  const item = inventario[idx];
+  const modal = document.getElementById('invModalContenido');
+  if(!item || !modal) return;
+
+  const stock = stockCalculado(item, idx);
+  const reorden = parseFloat(item.puntoReorden)||0;
+  const estado = item.eliminado ? 'gris' : estadoStock(item, stock);
+  const techoBarra = reorden>0 ? reorden*2 : (stock>0 ? stock : 1);
+  const pct = Math.max(0, Math.min(100, (stock/techoBarra)*100));
+  const colorBarra = estado==='rojo' ? 'var(--rojo-neg)' : estado==='amarillo' ? '#D69A1E' : 'var(--verde)';
+
+  const acciones = item.eliminado
+    ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarInsumoInventario(${idx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarInsumoInventario(${idx})">🙈</button>`
+    : `<button class="del" onclick="borrarInsumoInventario(${idx})">✕</button>`;
+
+  modal.innerHTML = `
+    <div class="inv-modal-encabezado">
+      <input class="inv-modal-nombre" type="text" value="${item.nombre}" ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'nombre',this.value)">
+      ${acciones}
+    </div>
+    ${item.eliminado ? '<span class="etiqueta-eliminado">Eliminado</span>' : ''}
+
+    <div class="inv-modal-stock-linea">
+      <span class="inv-modal-stock-num ${estado}">${stock.toLocaleString(undefined,{maximumFractionDigits:1})} ${item.unidadConteo||''}</span>
+      <span style="font-size:11.5px;color:var(--text-2);">punto de reorden: ${reorden} ${item.unidadConteo||''}</span>
+    </div>
+    <div class="inv-barra"><div class="inv-barra-fill" style="width:${pct}%; background:${colorBarra};"></div></div>
+
+    <div class="inv-campos">
+      <div>
+        <label>Grupo (dónde aparece)</label>
+        <select ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'grupo',this.value)">
+          <option value="Aderezo" ${item.grupo==='Aderezo'?'selected':''}>Aderezo</option>
+          <option value="Salsa" ${item.grupo==='Salsa'?'selected':''}>Salsa</option>
+          <option value="Lonche y empaque" ${(item.grupo||'Lonche y empaque')==='Lonche y empaque'?'selected':''}>Lonche y empaque</option>
+          <option value="Producto terminado y empaque" ${item.grupo==='Producto terminado y empaque'?'selected':''}>Producto terminado y empaque</option>
+        </select>
+      </div>
+      <div>
+        <label>Aplica a</label>
+        <select ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'aplicaA',this.value)">
+          <option value="lonche" ${item.aplicaA==='lonche'?'selected':''}>Lonche</option>
+          <option value="pasteles" ${item.aplicaA==='pasteles'?'selected':''}>Pasteles</option>
+          <option value="todos" ${item.aplicaA==='todos'?'selected':''}>Todos</option>
+        </select>
+      </div>
+      <div>
+        <label>Unidad de compra</label>
+        <input type="text" value="${item.unidadCompra||''}" ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'unidadCompra',this.value)">
+      </div>
+      <div>
+        <label>Unidad de conteo</label>
+        <input type="text" value="${item.unidadConteo||''}" ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'unidadConteo',this.value)">
+      </div>
+      <div>
+        <label>1 compra = cuántas de conteo</label>
+        <input type="number" step="0.01" value="${item.equivalencia||1}" ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'equivalencia',this.value)">
+      </div>
+      <div>
+        <label>Consumo por pieza vendida</label>
+        <input type="number" step="0.01" value="${item.consumoPorPieza||0}" ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'consumoPorPieza',this.value)">
+      </div>
+      <div>
+        <label>Punto de reorden</label>
+        <input type="number" step="0.01" value="${item.puntoReorden||0}" ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'puntoReorden',this.value)">
+      </div>
+      <div>
+        <label>Stock inicial</label>
+        <input type="number" step="0.01" value="${item.stockInicial||0}" ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'stockInicial',this.value)">
+      </div>
+      <div>
+        <label>Cuenta desde</label>
+        <input type="date" value="${item.fechaInicial||''}" ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'fechaInicial',this.value)">
+      </div>
+    </div>
+  `;
 }
 
 function renderConteoProductos(){
@@ -1367,18 +1774,23 @@ async function agregarCompra(){
   const unidad = document.getElementById('c-unidad').value;
   const costo = parseFloat(document.getElementById('c-costo').value) || 0;
   const fecha = document.getElementById('c-fecha').value || hoyISO();
+  const inventarioSel = document.getElementById('c-inventario').value;
+  const inventarioIdx = inventarioSel !== '' ? parseInt(inventarioSel) : null;
   if(!nombre || costo<=0){ toast('Completa insumo y costo'); return; }
 
-  compras.push({nombre, cantidad, unidad, costo, fecha});
+  const compra = {nombre, cantidad, unidad, costo, fecha};
+  if(inventarioIdx !== null) compra.inventarioIdx = inventarioIdx;
+  compras.push(compra);
   await guardar('compras', compras);
   document.getElementById('c-nombre').value = '';
   document.getElementById('c-cantidad').value = '';
   document.getElementById('c-costo').value = '';
+  document.getElementById('c-inventario').value = '';
 
   const {anio,semana} = semanaISO(fecha);
   semanasComprasAbiertas.add(anio+'-'+semana);
 
-  toast('Compra agregada ✓');
+  toast(inventarioIdx !== null ? 'Compra agregada ✓ · sumada al inventario' : 'Compra agregada ✓');
   renderTodo();
 }
 
@@ -1818,6 +2230,10 @@ function renderSaludEjecutivo(){
     tendenciaTxt = 'sin datos de la semana anterior para comparar';
   }
 
+  const bajosInventario = inventario
+    .map((item,idx)=>({...item, stock: stockCalculado(item, idx)}))
+    .filter(item => !item.eliminado && item.stock <= (parseFloat(item.puntoReorden)||0));
+
   cont.innerHTML = `
     <span class="salud-badge ${estado}">${icono} ${etiqueta}</span>
     <p class="salud-frase">
@@ -1826,6 +2242,7 @@ function renderSaludEjecutivo(){
     <ul class="salud-lista">
       <li>${diasCubiertos} de ${totalDias} días trabajados esta semana cubrieron el punto de equilibrio diario (~$${costoFijoDiario.toFixed(2)})</li>
       <li>Punto de equilibrio actual: equivalente a ~10 lonches al día, según el margen neto vigente del Lonche</li>
+      ${bajosInventario.length>0 ? `<li>⚠️ ${bajosInventario.length} insumo${bajosInventario.length>1?'s':''} por agotarse: ${bajosInventario.map(b=>b.nombre).join(', ')}</li>` : ''}
     </ul>
   `;
 }
@@ -1961,6 +2378,7 @@ function renderTodo(){
   renderCompras();
   renderResumen();
   renderGanancias();
+  renderInventario();
 }
 
 window.firebaseListo.then(() => {
