@@ -208,6 +208,7 @@
   .alerta-stock b{display:block; margin-bottom:2px; font-size:13.5px;}
 
   /* Alacena: cuadrícula compacta de cajitas */
+  .inv-secciones{display:flex; flex-direction:column;}
   .inv-grupo-titulo{
     font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;
     color:var(--text-2); margin:16px 0 8px 0;
@@ -219,7 +220,7 @@
   .inv-box{
     position:relative; text-align:left; cursor:pointer;
     border:1.5px solid var(--border); border-radius:10px; background:var(--card-bg);
-    padding:10px 10px 9px; min-height:74px;
+    padding:10px 10px 9px; height:74px; width:100%;
     display:flex; flex-direction:column; justify-content:space-between;
     font-family:inherit; transition:transform 0.08s ease;
   }
@@ -240,6 +241,17 @@
   .inv-box.eliminado .inv-box-nombre{text-decoration:line-through;}
   .inv-box-stock{font-size:16.5px; font-weight:800; margin-top:6px; line-height:1.1;}
   .inv-box-stock span{font-size:10px; font-weight:600; color:var(--text-2); margin-left:2px;}
+  .inv-box-compartido{
+    position:absolute; bottom:8px; right:9px; font-size:8.5px; font-weight:700;
+    color:var(--text-2); opacity:0.7;
+  }
+
+  .inv-grupos-check{display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:4px;}
+  .inv-grupos-check label{
+    display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500;
+    color:var(--text); margin:0; text-transform:none;
+  }
+  .inv-grupos-check input{width:auto; padding:0;}
 
   /* Modal de detalle al tocar una cajita */
   .inv-modal-overlay{
@@ -650,7 +662,7 @@
             Toca una cajita para ver y ajustar su detalle.
           </p>
           <div id="alertaInventario"></div>
-          <div id="listaInventario" class="inv-grid"></div>
+          <div id="listaInventario" class="inv-secciones"></div>
           <div id="ocultosInventarioToggle"></div>
           <button class="btn secundario" style="margin-top:14px;" onclick="agregarInsumoInventario()">+ Agregar insumo</button>
         </div>
@@ -843,25 +855,33 @@ const PRODUCTOS_SEMILLA = [
 function inventarioSemilla(){
   const hoy = hoyISO();
   return [
-    {nombre:'Birote',          grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'pza',     unidadConteo:'tira', equivalencia:2,    consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:6},
-    {nombre:'Carne de cerdo',  grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
-    {nombre:'Cebolla',         grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:10,   stockInicial:0, fechaInicial:hoy, puntoReorden:200},
-    {nombre:'Ajo',             grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:3,    stockInicial:0, fechaInicial:hoy, puntoReorden:100},
-    {nombre:'Sal',             grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:5,    stockInicial:0, fechaInicial:hoy, puntoReorden:200},
-    {nombre:'Contenedores',    grupo:'Lonche y empaque',              aplicaA:'lonche',   unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:25,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:15},
+    {nombre:'Birote',          grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'pza',     unidadConteo:'tira', equivalencia:2,    consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:6},
+    {nombre:'Carne de cerdo',  grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
+    {nombre:'Cebolla',         grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:10,   stockInicial:0, fechaInicial:hoy, puntoReorden:200},
+    {nombre:'Ajo',             grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:3,    stockInicial:0, fechaInicial:hoy, puntoReorden:100},
+    {nombre:'Sal',             grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:5,    stockInicial:0, fechaInicial:hoy, puntoReorden:200},
+    {nombre:'Contenedores',    grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:25,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:15},
 
-    {nombre:'Mayonesa',        grupo:'Aderezo',                       aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:20,   stockInicial:0, fechaInicial:hoy, puntoReorden:300},
-    {nombre:'Crema',           grupo:'Aderezo',                       aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:20,   stockInicial:0, fechaInicial:hoy, puntoReorden:300},
-    {nombre:'Mostaza',         grupo:'Aderezo',                       aplicaA:'lonche',   unidadCompra:'L',       unidadConteo:'ml',   equivalencia:1000, consumoPorPieza:5,    stockInicial:0, fechaInicial:hoy, puntoReorden:100},
+    /* La mayonesa se usa tanto en el aderezo como en la salsa (receta oficial):
+       es UN solo insumo con stock compartido — aparece en las dos secciones,
+       se puede editar desde cualquiera de las dos y siempre queda igual en ambas. */
+    {nombre:'Mayonesa',        grupo:['Aderezo','Salsa'],             aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:30,   stockInicial:0, fechaInicial:hoy, puntoReorden:400},
+    {nombre:'Crema',           grupo:['Aderezo'],                     aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:20,   stockInicial:0, fechaInicial:hoy, puntoReorden:300},
+    {nombre:'Mostaza',         grupo:['Aderezo'],                     aplicaA:'lonche',   unidadCompra:'L',       unidadConteo:'ml',   equivalencia:1000, consumoPorPieza:5,    stockInicial:0, fechaInicial:hoy, puntoReorden:100},
 
-    {nombre:'Jitomate',        grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
-    {nombre:'Puré de tomate',  grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:300},
-    {nombre:'Laurel',          grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'paquete', unidadConteo:'hoja', equivalencia:30,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:10},
-    {nombre:'Pimienta',        grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:0.5,  stockInicial:0, fechaInicial:hoy, puntoReorden:20},
-    {nombre:'Clavo',           grupo:'Salsa',                         aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:0.5,  stockInicial:0, fechaInicial:hoy, puntoReorden:20},
+    {nombre:'Jitomate',        grupo:['Salsa'],                       aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
+    {nombre:'Puré de tomate',  grupo:['Salsa'],                       aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:300},
+    {nombre:'Laurel',          grupo:['Salsa'],                       aplicaA:'lonche',   unidadCompra:'paquete', unidadConteo:'hoja', equivalencia:30,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:10},
+    {nombre:'Pimienta',        grupo:['Salsa'],                       aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:0.5,  stockInicial:0, fechaInicial:hoy, puntoReorden:20},
+    {nombre:'Clavo',           grupo:['Salsa'],                       aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:0.5,  stockInicial:0, fechaInicial:hoy, puntoReorden:20},
 
-    {nombre:'Servilletas',     grupo:'Producto terminado y empaque',  aplicaA:'todos',    unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:100,  consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:50},
-    {nombre:'Cucharas',        grupo:'Producto terminado y empaque',  aplicaA:'pasteles', unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:50,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:20},
+    /* Productos terminados: cada uno se descuenta solo de sus propias ventas
+       (aplicaA con el nombre exacto del producto, no la categoría genérica
+       "pasteles"), más su empaque específico y el empaque compartido. */
+    {nombre:'Chocoflan',           grupo:['Producto terminado y empaque'], aplicaA:'Chocoflan', unidadCompra:'pza', unidadConteo:'pza', equivalencia:1,  consumoPorPieza:1, stockInicial:0, fechaInicial:hoy, puntoReorden:3},
+    {nombre:'Charolas para pastel',grupo:['Producto terminado y empaque'], aplicaA:'pasteles',  unidadCompra:'paquete', unidadConteo:'pza', equivalencia:10, consumoPorPieza:1, stockInicial:0, fechaInicial:hoy, puntoReorden:10},
+    {nombre:'Servilletas',         grupo:['Producto terminado y empaque'], aplicaA:'todos',     unidadCompra:'paquete', unidadConteo:'pza', equivalencia:100, consumoPorPieza:1, stockInicial:0, fechaInicial:hoy, puntoReorden:50},
+    {nombre:'Cucharas',            grupo:['Producto terminado y empaque'], aplicaA:'pasteles',  unidadCompra:'paquete', unidadConteo:'pza', equivalencia:50,  consumoPorPieza:1, stockInicial:0, fechaInicial:hoy, puntoReorden:20},
   ];
 }
 
@@ -1089,7 +1109,31 @@ function aplicaProducto(aplicaA, producto){
   if(aplicaA==='todos') return true;
   if(aplicaA==='lonche') return producto==='Lonche';
   if(aplicaA==='pasteles') return producto!=='Lonche';
-  return false;
+  return aplicaA === producto; // nombre exacto de un producto específico (ej. "Chocoflan")
+}
+
+/* grupo puede venir como string (datos viejos) o array (formato actual);
+   esta función siempre regresa un array para poder tratarlo igual en todos lados. */
+function grupoInsumo(item){
+  if(Array.isArray(item.grupo)) return item.grupo.length ? item.grupo : ['Lonche y empaque'];
+  if(item.grupo) return [item.grupo];
+  return ['Lonche y empaque'];
+}
+
+async function toggleGrupoInsumo(idx, grupo, marcado){
+  const item = inventario[idx];
+  if(!item) return;
+  let actuales = grupoInsumo(item).slice();
+  if(marcado){
+    if(!actuales.includes(grupo)) actuales.push(grupo);
+  } else {
+    actuales = actuales.filter(g=>g!==grupo);
+    if(actuales.length===0) actuales = ['Lonche y empaque']; // siempre debe pertenecer a algún grupo
+  }
+  item.grupo = actuales;
+  await guardar('inventario', inventario);
+  renderInventario();
+  if(document.getElementById('invModalOverlay').classList.contains('abierto')) renderDetalleInsumo(idx);
 }
 
 function stockCalculado(item, idx){
@@ -1113,7 +1157,7 @@ function estadoStock(item, stock){
 
 async function agregarInsumoInventario(){
   inventario.push({
-    nombre:'Nuevo insumo', grupo:'Lonche y empaque', aplicaA:'lonche',
+    nombre:'Nuevo insumo', grupo:['Lonche y empaque'], aplicaA:'lonche',
     unidadCompra:'kg', unidadConteo:'g', equivalencia:1000,
     consumoPorPieza:0, stockInicial:0, fechaInicial: hoyISO(), puntoReorden:0
   });
@@ -1212,9 +1256,10 @@ function renderInventario(){
     const ORDEN_GRUPOS = ['Aderezo','Salsa','Lonche y empaque','Producto terminado y empaque'];
     const grupos = {};
     visibles.forEach(item=>{
-      const g = item.grupo || 'Lonche y empaque';
-      if(!grupos[g]) grupos[g] = [];
-      grupos[g].push(item);
+      grupoInsumo(item).forEach(g=>{
+        if(!grupos[g]) grupos[g] = [];
+        grupos[g].push(item);
+      });
     });
     const clavesGrupos = Object.keys(grupos).sort((a,b)=>{
       const ia = ORDEN_GRUPOS.indexOf(a), ib = ORDEN_GRUPOS.indexOf(b);
@@ -1226,11 +1271,13 @@ function renderInventario(){
         const idx = item.idx;
         const stock = stockCalculado(item, idx);
         const estado = item.eliminado ? 'gris' : estadoStock(item, stock);
+        const compartido = grupoInsumo(item).length > 1;
         return `
           <button class="inv-box ${item.eliminado?'eliminado':estado}" onclick="abrirDetalleInsumo(${idx})">
             <span class="inv-box-dot ${estado}"></span>
             <span class="inv-box-nombre">${item.nombre}</span>
             <span class="inv-box-stock">${stock.toLocaleString(undefined,{maximumFractionDigits:1})}<span>${item.unidadConteo||''}</span></span>
+            ${compartido ? '<span class="inv-box-compartido">compartido</span>' : ''}
           </button>
         `;
       }).join('');
@@ -1289,22 +1336,22 @@ function renderDetalleInsumo(idx){
     </div>
     <div class="inv-barra"><div class="inv-barra-fill" style="width:${pct}%; background:${colorBarra};"></div></div>
 
+    <label>Dónde aparece (puedes marcar varias — es el mismo stock, se ve igual en todas)</label>
+    <div class="inv-grupos-check">
+      ${['Aderezo','Salsa','Lonche y empaque','Producto terminado y empaque'].map(g=>{
+        const marcado = grupoInsumo(item).includes(g);
+        return `<label><input type="checkbox" ${marcado?'checked':''} ${item.eliminado?'disabled':''} onchange="toggleGrupoInsumo(${idx},'${g}',this.checked)"> ${g}</label>`;
+      }).join('')}
+    </div>
+
     <div class="inv-campos">
-      <div>
-        <label>Grupo (dónde aparece)</label>
-        <select ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'grupo',this.value)">
-          <option value="Aderezo" ${item.grupo==='Aderezo'?'selected':''}>Aderezo</option>
-          <option value="Salsa" ${item.grupo==='Salsa'?'selected':''}>Salsa</option>
-          <option value="Lonche y empaque" ${(item.grupo||'Lonche y empaque')==='Lonche y empaque'?'selected':''}>Lonche y empaque</option>
-          <option value="Producto terminado y empaque" ${item.grupo==='Producto terminado y empaque'?'selected':''}>Producto terminado y empaque</option>
-        </select>
-      </div>
       <div>
         <label>Aplica a</label>
         <select ${item.eliminado?'disabled':''} onchange="actualizarInsumoInventario(${idx},'aplicaA',this.value)">
           <option value="lonche" ${item.aplicaA==='lonche'?'selected':''}>Lonche</option>
-          <option value="pasteles" ${item.aplicaA==='pasteles'?'selected':''}>Pasteles</option>
-          <option value="todos" ${item.aplicaA==='todos'?'selected':''}>Todos</option>
+          <option value="pasteles" ${item.aplicaA==='pasteles'?'selected':''}>Todos los pasteles</option>
+          <option value="todos" ${item.aplicaA==='todos'?'selected':''}>Todo (lonche + pasteles)</option>
+          ${productosActivos().map(p=>`<option value="${p.nombre}" ${item.aplicaA===p.nombre?'selected':''}>Solo ${p.nombre}</option>`).join('')}
         </select>
       </div>
       <div>
