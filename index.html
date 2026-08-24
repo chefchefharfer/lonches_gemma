@@ -604,6 +604,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyCoe2So4sBEMTsza3UvRRW_-BH0XA0uGWE",
@@ -615,6 +616,24 @@
   };
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  // Autenticación anónima: no pide nada al usuario, solo abre una sesión
+  // silenciosa para que Firestore pueda exigir "usuario autenticado" en
+  // sus reglas de seguridad. La app espera a que exista sesión antes de
+  // arrancar init(), que es lo que lee/escribe Firestore.
+  window.firebaseListo = new Promise((resolve, reject) => {
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        resolve(user);
+      } else {
+        auth.signInAnonymously().catch(err => {
+          console.error('Error al iniciar sesión anónima:', err);
+          reject(err);
+        });
+      }
+    });
+  });
 </script>
 <script>
 /* ---------- Almacenamiento persistente (Firebase Firestore) ---------- */
@@ -1944,7 +1963,18 @@ function renderTodo(){
   renderGanancias();
 }
 
-init();
+window.firebaseListo.then(() => {
+  init();
+}).catch((err) => {
+  console.error('No se pudo iniciar sesión con Firebase:', err);
+  const cont = document.querySelector('main');
+  if(cont){
+    const aviso = document.createElement('div');
+    aviso.className = 'card';
+    aviso.innerHTML = '<h2>Error de conexión</h2><p class="sub">No se pudo conectar con la base de datos. Revisa tu conexión a internet y recarga la página.</p>';
+    cont.prepend(aviso);
+  }
+});
 </script>
 </body>
 </html>
