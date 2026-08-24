@@ -696,6 +696,8 @@
             <div class="stat"><div class="num" id="r-gastos">$0</div><div class="lbl">Gastos (compras)</div></div>
             <div class="stat"><div class="num" id="r-ganancia">$0</div><div class="lbl">Ganancia neta</div></div>
           </div>
+          <button class="btn secundario" style="margin-top:14px;" onclick="exportarTodo()">⬇️ Exportar todo (para Excel / Claude)</button>
+          <p class="sub" style="margin-top:8px;">Descarga un archivo con toda la información de la app (ventas, compras, ingredientes, productos e inventario). Súbelo a Claude for Excel y pídele que arme las hojas con esos datos.</p>
         </div>
 
         <div class="card">
@@ -2465,6 +2467,30 @@ function renderTodo(){
   renderResumen();
   renderGanancias();
   renderInventario();
+}
+
+/* ---------- Exportar todo a un solo archivo, para pasárselo a Claude for Excel ---------- */
+function exportarTodo(){
+  const paquete = {
+    exportado: new Date().toISOString(),
+    negocio: 'Lonches Gemma',
+    ventas: ventas,
+    compras: compras,
+    ingredientes: ingredientes,
+    productos: productos,
+    inventario: inventario
+  };
+  const blob = new Blob([JSON.stringify(paquete, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fecha = hoyISO();
+  a.href = url;
+  a.download = `lonches_gemma_export_${fecha}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Archivo descargado ✓');
 }
 
 window.firebaseListo.then(() => {
