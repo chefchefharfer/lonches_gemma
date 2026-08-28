@@ -565,7 +565,8 @@
         <div class="card">
           <h2>Registrar compra / insumo</h2>
           <label>Insumo</label>
-          <input type="text" id="c-nombre" placeholder="Ej. Carne de cerdo">
+          <input type="text" id="c-nombre" list="lista-insumos-conocidos" placeholder="Ej. Carne de cerdo">
+          <datalist id="lista-insumos-conocidos"></datalist>
           <label>Vincular a inventario (opcional)</label>
           <select id="c-inventario" onchange="alVincularCompraInventario()">
             <option value="">Ninguno — no afecta el inventario</option>
@@ -591,6 +592,9 @@
               <input type="number" step="0.01" id="c-costo" placeholder="122">
             </div>
           </div>
+          <label>Proveedor (opcional)</label>
+          <input type="text" id="c-proveedor" list="lista-proveedores-conocidos" placeholder="Ej. Walmart">
+          <datalist id="lista-proveedores-conocidos"></datalist>
           <label>Fecha</label>
           <input type="date" id="c-fecha">
           <button class="btn" onclick="agregarCompra()">+ Agregar compra</button>
@@ -613,10 +617,9 @@
       <section id="vista-ingredientes" class="vista">
         <div class="card">
           <h2>Ingredientes del lonche</h2>
-          <p class="sub">Actualiza el costo de cada ingrediente por pieza — el costeo se recalcula solo. Eliminar pide confirmación y no borra el dato, solo lo tacha.</p>
+          <p class="sub">Costo por pieza de cada insumo, calculado automáticamente con tu compra más reciente (pestaña Compras) y el consumo por pieza definido en Inventario.</p>
           <div id="listaIngredientes"></div>
           <div id="ocultosIngredientesToggle"></div>
-          <button class="btn secundario chico" style="margin-top:12px;width:100%;" onclick="agregarIngrediente()">+ Agregar ingrediente</button>
         </div>
 
         <div class="card">
@@ -832,7 +835,7 @@ const VENTAS_SEMILLA = [
 
 const INGREDIENTES_SEMILLA = [
   {nombre:'Birote (pieza $8, rinde 2 tiras)', costo:4},
-  {nombre:'Carne de cerdo (~83g)', costo:10},
+  {nombre:'Carne de cerdo (~30g)', costo:3.61},
   {nombre:'Jitomate (~83g)', costo:1.70},
   {nombre:'Puré de tomate (~83g)', costo:1.35},
   {nombre:'Crema', costo:1},
@@ -869,7 +872,7 @@ function inventarioSemilla(){
   const hoy = hoyISO();
   return [
     {nombre:'Birote',          grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'pza',     unidadConteo:'tira', equivalencia:2,    consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:6},
-    {nombre:'Carne de cerdo',  grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:83,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
+    {nombre:'Carne de cerdo',  grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:30,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
     {nombre:'Cebolla',         grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:10,   stockInicial:0, fechaInicial:hoy, puntoReorden:200},
     {nombre:'Ajo',             grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:3,    stockInicial:0, fechaInicial:hoy, puntoReorden:100},
     {nombre:'Sal',             grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:5,    stockInicial:0, fechaInicial:hoy, puntoReorden:200},
@@ -1007,21 +1010,99 @@ function fmtRango(lun,vie){
   return `${lun.getDate()} - ${vie.getDate()} ${meses[vie.getMonth()]}`;
 }
 
-/* ---------- Costeo / márgenes (Opción B: solo el Lonche prorratea mano de
-   obra e indirectos por pieza; Chocoflan y demás productos solo restan
-   costo de producto + empaque) ---------- */
+/* ---------- Costeo dinámico: el costo de cada insumo/producto se calcula
+   siempre a partir de la COMPRA MÁS RECIENTE registrada en "compras", no de
+   un número capturado a mano. Así, en cuanto se registra una compra nueva,
+   el costo del lonche y de los pasteles se actualiza solo.
+   (Opción B se mantiene: solo el Lonche y los demás productos prorratean
+   mano de obra e indirectos por pieza de la misma forma.) ---------- */
+
+const normNombre = s => (s||'').trim().toLowerCase();
+
+/* Costo por unidad de compra ($/kg, $/pza, $/paquete...) de la compra más
+   reciente que coincide con un nombre — usado para productos/extras que se
+   compran ya hechos (pasteles, empaques) y se cuentan en piezas o paquetes. */
+function costoUnitarioPorNombreCompra(nombre){
+  if(!nombre) return null;
+  const candidatas = comprasActivas().filter(c => normNombre(c.nombre) === normNombre(nombre) && (parseFloat(c.cantidad)||0) > 0);
+  if(candidatas.length === 0) return null;
+  candidatas.sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+  const masReciente = candidatas[0];
+  return masReciente.costo / masReciente.cantidad;
+}
+
+/* Costo por unidad de conteo ($/g, $/ml, $/hoja...) de un insumo del
+   Inventario, a partir de la compra más reciente vinculada a ese insumo
+   (por inventarioIdx si existe, si no por nombre) y su equivalencia. */
+function costoPorUnidadConteoInsumo(item){
+  const idx = inventario.indexOf(item);
+  let candidatas = comprasActivas().filter(c => c.inventarioIdx === idx && (parseFloat(c.cantidad)||0) > 0);
+  if(candidatas.length === 0){
+    candidatas = comprasActivas().filter(c => normNombre(c.nombre) === normNombre(item.nombre) && (parseFloat(c.cantidad)||0) > 0);
+  }
+  if(candidatas.length === 0) return null;
+  candidatas.sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+  const costoPorUnidadCompra = candidatas[0].costo / candidatas[0].cantidad;
+  const equivalencia = parseFloat(item.equivalencia) || 1;
+  return costoPorUnidadCompra / equivalencia;
+}
+
+/* Detalle de costeo de un insumo del lonche: cuánto cuesta la porción que
+   lleva cada pieza, y de dónde salió ese costo (compra real o, si todavía
+   no hay compra registrada para ese insumo, el valor manual de respaldo
+   guardado en "ingredientes" para no dejar el costo en $0 silenciosamente). */
+function detalleCostoInsumoLonche(item){
+  const consumoPorPieza = parseFloat(item.consumoPorPieza) || 0;
+  const costoUnidad = costoPorUnidadConteoInsumo(item);
+  if(costoUnidad !== null){
+    return {costoPieza: costoUnidad * consumoPorPieza, fuente:'compra'};
+  }
+  const respaldo = ingredientesActivos().find(ing => normNombre(ing.nombre).includes(normNombre(item.nombre)));
+  if(respaldo){
+    return {costoPieza: respaldo.costo || 0, fuente:'manual'};
+  }
+  return {costoPieza: 0, fuente:'sin_datos'};
+}
+
+function costoInsumosLonche(){
+  return inventarioActivo()
+    .filter(item => item.aplicaA === 'lonche')
+    .reduce((total, item) => total + detalleCostoInsumoLonche(item).costoPieza, 0);
+}
+
+/* Costo base por pieza de un producto (pastel, chocoflan...): toma la
+   compra más reciente registrada con ese mismo nombre (costo del lote ÷
+   piezas compradas); si todavía no hay compra registrada, cae al
+   costoLote/piezasLote capturados a mano en la ficha del producto. */
+function costoBaseProducto(p){
+  const costoCompra = costoUnitarioPorNombreCompra(p.nombre);
+  if(costoCompra !== null) return {costoPieza: costoCompra, fuente:'compra'};
+  const manual = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
+  return {costoPieza: manual, fuente:'manual'};
+}
+
+/* Costo de extras (charolita, cucharita...) de un producto: igual, primero
+   busca su compra más reciente por nombre; si no hay, usa el $ manual
+   capturado en el extra. */
+function costoExtrasProducto(p){
+  return (p.extras||[]).filter(e=>!e.eliminado).reduce((s,e)=>{
+    const costoCompra = costoUnitarioPorNombreCompra(e.nombre);
+    return s + (costoCompra !== null ? costoCompra : (e.costo||0));
+  },0);
+}
+
 function margenNetoActual(nombre){
   const manoObra = parseFloat(document.getElementById('ing-manoobra')?.value || 0);
   const indirectos = parseFloat(document.getElementById('ing-indirectos')?.value || 0);
   if(nombre === 'Lonche'){
     const precio = parseFloat(document.getElementById('ing-precio')?.value || 30);
-    const costoInsumos = ingredientesActivos().reduce((s,ing)=>s+(ing.costo||0),0);
+    const costoInsumos = costoInsumosLonche();
     return precio - costoInsumos - manoObra - indirectos;
   }
   const p = productosActivos().find(pr=>pr.nombre === nombre);
   if(!p) return 0;
-  const costoBase = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
-  const costoExtras = (p.extras||[]).filter(e=>!e.eliminado).reduce((s,e)=>s+(e.costo||0),0);
+  const costoBase = costoBaseProducto(p).costoPieza;
+  const costoExtras = costoExtrasProducto(p);
   // metodología uniforme: todos los productos prorratean mano de obra e indirectos igual que el Lonche
   const costoTotal = costoBase + costoExtras + manoObra + indirectos;
   return p.precioVenta - costoTotal;
@@ -1089,6 +1170,19 @@ async function init(){
 
   inventario = await cargar('inventario', null);
   if(inventario === null){ inventario = inventarioSemilla(); await guardar('inventario', inventario); }
+  else {
+    // Migración: el consumo de carne de cerdo por lonche estaba capturado a
+    // 83g (heredado del costeo viejo); el consumo real es 30g.
+    let migradoCarne = false;
+    inventario = inventario.map(item=>{
+      if(normNombre(item.nombre)==='carne de cerdo' && parseFloat(item.consumoPorPieza)===83){
+        migradoCarne = true;
+        return {...item, consumoPorPieza:30};
+      }
+      return item;
+    });
+    if(migradoCarne) await guardar('inventario', inventario);
+  }
 
   // abrir la semana mas reciente por default (ventas, ganancias y compras)
   if(ventas.length){
@@ -1421,6 +1515,8 @@ function renderConteoProductos(){
           <input type="number" min="0" id="t-cortesia-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
         </div>
       </div>
+      <label>De lo que sobró, ¿cuánto se tiró (merma real, no lo que guardaste para vender después)?</label>
+      <input type="number" min="0" id="t-merma-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
       <div class="conteo-resumen" id="t-resumen-${idx}">Vendiste: 0 · $0</div>
     </div>
   `).join('');
@@ -1434,9 +1530,14 @@ function actualizarResumenConteo(idx){
   const llevaste = parseInt(document.getElementById(`t-llevaste-${idx}`).value)||0;
   const sobraron = parseInt(document.getElementById(`t-sobraron-${idx}`).value)||0;
   const cortesia = parseInt(document.getElementById(`t-cortesia-${idx}`).value)||0;
+  const elMerma = document.getElementById(`t-merma-${idx}`);
+  let merma = elMerma ? (parseInt(elMerma.value)||0) : 0;
+  if(elMerma && merma > sobraron){ merma = sobraron; elMerma.value = merma; }
   let vendiste = llevaste - sobraron - cortesia;
   if(vendiste < 0) vendiste = 0;
-  document.getElementById(`t-resumen-${idx}`).textContent = `Vendiste: ${vendiste} · $${(vendiste*p.precio).toLocaleString()}`;
+  const guardable = sobraron - merma;
+  const txtMerma = merma > 0 ? ` · Merma real: ${merma}${guardable>0 ? ` · Se guarda para después: ${guardable}` : ''}` : '';
+  document.getElementById(`t-resumen-${idx}`).textContent = `Vendiste: ${vendiste} · $${(vendiste*p.precio).toLocaleString()}${txtMerma}`;
 }
 
 function alCambiarTurno(){
@@ -1489,12 +1590,15 @@ async function registrarTurno(){
     if(llevaste <= 0) return;
     const sobraron = parseInt(document.getElementById(`t-sobraron-${idx}`).value)||0;
     const cortesia = parseInt(document.getElementById(`t-cortesia-${idx}`).value)||0;
+    const elMerma = document.getElementById(`t-merma-${idx}`);
+    let merma = elMerma ? (parseInt(elMerma.value)||0) : 0;
+    if(merma > sobraron) merma = sobraron;
     let vendiste = llevaste - sobraron - cortesia;
     if(vendiste < 0) vendiste = 0;
     algo = true;
     const venta = {
       fecha, turno, canal, producto:p.nombre,
-      llevadas:llevaste, sobrantes:sobraron, cortesias:cortesia,
+      llevadas:llevaste, sobrantes:sobraron, cortesias:cortesia, merma,
       cantidad:vendiste, precio:p.precio,
       margenNeto: margenNetoActual(p.nombre)
     };
@@ -1516,6 +1620,7 @@ async function registrarTurno(){
     document.getElementById(`t-llevaste-${idx}`).value = 0;
     document.getElementById(`t-sobraron-${idx}`).value = 0;
     document.getElementById(`t-cortesia-${idx}`).value = 0;
+    if(document.getElementById(`t-merma-${idx}`)) document.getElementById(`t-merma-${idx}`).value = 0;
     actualizarResumenConteo(idx);
   });
   if(document.getElementById('t-hora')) document.getElementById('t-hora').value = '';
@@ -1661,7 +1766,7 @@ function renderVentas(){
                   ${detalleAbierto ? `
                     <div class="item-detalle">
                       Canal: <b>${v.canal || (v.turno==='Redes sociales' ? 'Redes sociales' : 'Puesto ambulante')}</b>${v.horaVenta ? ` · Hora: <b>${v.horaVenta}</b>` : ''}<br>
-                      ${v.llevadas!==undefined ? `Llevaste: <b>${v.llevadas}</b> · Sobraron: <b>${v.sobrantes||0}</b> · Cortesía: <b>${v.cortesias||0}</b><br>` : ''}
+                      ${v.llevadas!==undefined ? `Llevaste: <b>${v.llevadas}</b> · Sobraron: <b>${v.sobrantes||0}</b>${v.merma ? ` (merma real: <b>${v.merma}</b>, guardado para después: <b>${(v.sobrantes||0)-v.merma}</b>)` : (v.sobrantes ? ' (se guarda para vender después)' : '')} · Cortesía: <b>${v.cortesias||0}</b><br>` : ''}
                       Vendiste: <b>${v.cantidad}</b> · Precio unitario: <b>$${v.precio}</b> · Total: <b>$${(v.cantidad*v.precio).toLocaleString()}</b>
                       ${(v.tempC!==undefined && v.tempC!==null) ? `<br>Temperatura del turno: <b>${v.tempC}°C</b>` : ''}
                     </div>
@@ -1848,6 +1953,7 @@ async function agregarCompra(){
   const cantidad = parseFloat(document.getElementById('c-cantidad').value) || 0;
   const unidad = document.getElementById('c-unidad').value;
   const costo = parseFloat(document.getElementById('c-costo').value) || 0;
+  const proveedor = document.getElementById('c-proveedor').value.trim();
   const fecha = document.getElementById('c-fecha').value || hoyISO();
   const inventarioSel = document.getElementById('c-inventario').value;
   const inventarioIdx = inventarioSel !== '' ? parseInt(inventarioSel) : null;
@@ -1855,11 +1961,13 @@ async function agregarCompra(){
 
   const compra = {nombre, cantidad, unidad, costo, fecha};
   if(inventarioIdx !== null) compra.inventarioIdx = inventarioIdx;
+  if(proveedor) compra.proveedor = proveedor;
   compras.push(compra);
   await guardar('compras', compras);
   document.getElementById('c-nombre').value = '';
   document.getElementById('c-cantidad').value = '';
   document.getElementById('c-costo').value = '';
+  document.getElementById('c-proveedor').value = '';
   document.getElementById('c-inventario').value = '';
 
   const {anio,semana} = semanaISO(fecha);
@@ -1867,6 +1975,27 @@ async function agregarCompra(){
 
   toast(inventarioIdx !== null ? 'Compra agregada ✓ · sumada al inventario' : 'Compra agregada ✓');
   renderTodo();
+}
+
+/* Listas de sugerencias (datalist) para los campos de Insumo y Proveedor de
+   Compras: insumos conocidos = nombres ya usados en Inventario, Productos o
+   compras previas; proveedores conocidos = los ya usados más una lista base. */
+const PROVEEDORES_BASE = ['Comercial Cabrera','Los Altos Dulcería','Farmacia Tepa','Walmart','Costco','Sam\'s Club'];
+
+function actualizarDatalistsCompras(){
+  const dlInsumos = document.getElementById('lista-insumos-conocidos');
+  const dlProveedores = document.getElementById('lista-proveedores-conocidos');
+  if(!dlInsumos || !dlProveedores) return;
+
+  const nombresInsumos = new Set([
+    ...inventarioActivo().map(i=>i.nombre),
+    ...productosActivos().map(p=>p.nombre),
+    ...comprasActivas().map(c=>c.nombre)
+  ].filter(Boolean));
+  dlInsumos.innerHTML = Array.from(nombresInsumos).sort().map(n=>`<option value="${n}"></option>`).join('');
+
+  const proveedores = new Set([...PROVEEDORES_BASE, ...comprasActivas().map(c=>c.proveedor).filter(Boolean)]);
+  dlProveedores.innerHTML = Array.from(proveedores).sort().map(n=>`<option value="${n}"></option>`).join('');
 }
 
 async function borrarCompra(i){
@@ -1905,6 +2034,7 @@ function toggleDetalleCompra(i){
 }
 
 function renderCompras(){
+  actualizarDatalistsCompras();
   const cont = document.getElementById('listaCompras');
   const visiblesCompras = compras.map((c,i)=>({...c,i})).filter(c=>!c.oculto || mostrarOcultosCompras);
   if(visiblesCompras.length===0){
@@ -1948,7 +2078,7 @@ function renderCompras(){
                     <div class="item-fila" onclick="toggleDetalleCompra(${c.i})">
                       <div class="izq">
                         <b>${c.nombre}</b>${c.eliminado?'<span class="etiqueta-eliminado">Eliminado</span>':''}
-                        <span>${fmtFecha(c.fecha)}</span>
+                        <span>${fmtFecha(c.fecha)}${c.proveedor ? ' · '+c.proveedor : ''}</span>
                       </div>
                       <div class="der">
                         <span class="pill">$${c.costo.toLocaleString()}</span>
@@ -1959,7 +2089,8 @@ function renderCompras(){
                       <div class="item-detalle">
                         Cantidad comprada: <b>${c.cantidad || 0} ${c.unidad||''}</b><br>
                         Costo total: <b>$${c.costo.toLocaleString()}</b><br>
-                        Costo por ${c.unidad||'unidad'}: <b>${costoUnidad!==null ? '$'+costoUnidad.toFixed(2)+' / '+(c.unidad||'unidad') : 'N/D'}</b>
+                        Costo por ${c.unidad||'unidad'}: <b>${costoUnidad!==null ? '$'+costoUnidad.toFixed(2)+' / '+(c.unidad||'unidad') : 'N/D'}</b><br>
+                        Proveedor: <b>${c.proveedor || 'No registrado'}</b>
                       </div>
                     ` : ''}
                   </div>
@@ -2019,36 +2150,37 @@ function toggleOcultosIngredientes(){
 
 function renderIngredientes(){
   const cont = document.getElementById('listaIngredientes');
-  const visibles = ingredientes.map((ing,i)=>({...ing,_i:i})).filter(ing=>!ing.oculto || mostrarOcultosIngredientes);
-  cont.innerHTML = visibles.map((ing)=>{
-    const i = ing._i;
-    const acciones = ing.eliminado
-      ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarIngrediente(${i})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarIngrediente(${i})">🙈</button>`
-      : `<button class="del" onclick="borrarIngrediente(${i})">✕</button>`;
-    return `
-    <div class="receta-item ${ing.eliminado?'fila-eliminada':''}">
-      <input type="text" value="${ing.nombre}" ${ing.eliminado?'disabled':''} onchange="actualizarIngrediente(${i},'nombre',this.value)">
-      <span>$</span>
-      <input type="number" step="0.01" value="${ing.costo}" ${ing.eliminado?'disabled':''} onchange="actualizarIngrediente(${i},'costo',this.value)">
-      ${acciones}
-    </div>
-  `;
-  }).join('');
+  const insumosLonche = inventarioActivo().filter(item => item.aplicaA === 'lonche');
 
-  const ocultosCont = document.getElementById('ocultosIngredientesToggle');
-  if(ocultosCont){
-    const n = ingredientes.filter(ing=>ing.oculto).length;
-    ocultosCont.innerHTML = n>0
-      ? `<button class="link-ocultos" onclick="toggleOcultosIngredientes()">${mostrarOcultosIngredientes ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${n})`}</button>`
-      : '';
+  if(insumosLonche.length === 0){
+    cont.innerHTML = '<p class="vacio">No hay insumos marcados como "lonche" en Inventario todavía</p>';
+  } else {
+    cont.innerHTML = insumosLonche.map((item)=>{
+      const {costoPieza, fuente} = detalleCostoInsumoLonche(item);
+      const etiquetaFuente = fuente==='compra' ? 'desde tu compra más reciente'
+        : fuente==='manual' ? 'valor manual (aún sin compra registrada de este insumo)'
+        : 'sin datos — registra una compra de este insumo';
+      return `
+      <div class="receta-item">
+        <div class="izq" style="flex:1;">
+          <b>${item.nombre}</b>
+          <span>${(parseFloat(item.consumoPorPieza)||0)} ${item.unidadConteo||''}/pza · ${etiquetaFuente}</span>
+        </div>
+        <span class="pill">$${costoPieza.toFixed(2)}</span>
+      </div>
+    `;
+    }).join('');
   }
+
+  document.getElementById('ocultosIngredientesToggle').innerHTML =
+    '<p class="sub" style="margin-top:8px;">Estos costos ya no se capturan a mano: se recalculan solos con la compra más reciente de cada insumo (pestaña Compras) y el consumo por pieza definido en Inventario.</p>';
 
   renderTotalesIngredientes();
   renderConteoProductos();
 }
 
 function renderTotalesIngredientes(){
-  const costoInsumos = ingredientesActivos().reduce((s,ing)=>s+(ing.costo||0),0);
+  const costoInsumos = costoInsumosLonche();
   const precio = parseFloat(document.getElementById('ing-precio').value)||0;
   const manoObra = parseFloat(document.getElementById('ing-manoobra').value)||0;
   const indirectos = parseFloat(document.getElementById('ing-indirectos').value)||0;
@@ -2153,11 +2285,14 @@ function renderProductos(){
 
   cont.innerHTML = visibles.map((p)=>{
     const idx = p._idx;
-    const costoBase = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
+    const { costoPieza: costoBase, fuente: fuenteCostoBase } = costoBaseProducto(p);
     const extrasVisibles = (p.extras||[]).map((e,exIdx)=>({...e,_exIdx:exIdx}));
-    const costoExtras = extrasVisibles.filter(e=>!e.eliminado).reduce((s,e)=>s+(e.costo||0),0);
+    const costoExtras = costoExtrasProducto(p);
     // metodología uniforme: mano de obra e indirectos prorrateados automáticamente, igual que el Lonche
     const costoTotal = costoBase + costoExtras + fijosPza;
+    const notaCostoBase = fuenteCostoBase === 'compra'
+      ? 'automático: última compra registrada con este nombre'
+      : 'manual — registra una compra con este mismo nombre para que se actualice solo';
     const margenBruto = p.precioVenta - costoBase - costoExtras;
     const margenNeto = p.precioVenta - costoTotal;
     const pctBruto = p.precioVenta>0 ? (margenBruto/p.precioVenta*100) : 0;
@@ -2175,13 +2310,14 @@ function renderProductos(){
         ${accionesProd}
       </div>
 
+      <p class="sub" style="margin-top:8px;">Costo base/pza ${notaCostoBase}</p>
       <div class="grid3">
         <div>
-          <label>Costo del lote ($)</label>
+          <label>Costo del lote ($) — respaldo manual</label>
           <input type="number" step="0.01" value="${p.costoLote}" ${p.eliminado?'disabled':''} onchange="actualizarProducto(${idx},'costoLote',this.value)">
         </div>
         <div>
-          <label>Piezas por lote</label>
+          <label>Piezas por lote — respaldo manual</label>
           <input type="number" step="1" value="${p.piezasLote}" ${p.eliminado?'disabled':''} onchange="actualizarProducto(${idx},'piezasLote',this.value)">
         </div>
         <div>
@@ -2189,8 +2325,10 @@ function renderProductos(){
           <input type="number" step="0.01" value="${p.precioVenta}" ${p.eliminado?'disabled':''} onchange="actualizarProducto(${idx},'precioVenta',this.value)">
         </div>
       </div>
+      <p class="sub" style="margin-top:2px;">Para que el costo se actualice solo, registra la compra de este producto en la pestaña Compras usando <b>exactamente el mismo nombre</b> (ej. "${p.nombre}"), con la cantidad de piezas del lote y el costo total.</p>
 
       <h3>Empaque / extras por pieza</h3>
+      <p class="sub" style="margin:-4px 0 8px 0;">Si registras una compra con el mismo nombre que un extra (ej. "Charolita"), su costo se actualiza solo; si no, se usa el $ capturado aquí abajo.</p>
       ${extrasVisibles.map((ex)=>{
         const exIdx = ex._exIdx;
         const accionesExtra = ex.eliminado
@@ -2309,6 +2447,10 @@ function renderSaludEjecutivo(){
     .map((item,idx)=>({...item, stock: stockCalculado(item, idx)}))
     .filter(item => !item.eliminado && item.stock <= (parseFloat(item.puntoReorden)||0));
 
+  const mermaSemana = activas
+    .filter(v => diasSemanaRef.includes(v.fecha))
+    .reduce((s,v)=>s+(v.merma||0),0);
+
   cont.innerHTML = `
     <span class="salud-badge ${estado}">${icono} ${etiqueta}</span>
     <p class="salud-frase">
@@ -2317,6 +2459,7 @@ function renderSaludEjecutivo(){
     <ul class="salud-lista">
       <li>${diasCubiertos} de ${totalDias} días trabajados esta semana cubrieron el punto de equilibrio diario (~$${costoFijoDiario.toFixed(2)})</li>
       <li>Punto de equilibrio actual: equivalente a ~10 lonches al día, según el margen neto vigente del Lonche</li>
+      ${mermaSemana>0 ? `<li>🗑️ Merma real esta semana (piezas tiradas, no las que se guardaron para vender después): <b>${mermaSemana}</b></li>` : ''}
       ${bajosInventario.length>0 ? `<li>⚠️ ${bajosInventario.length} insumo${bajosInventario.length>1?'s':''} por agotarse: ${bajosInventario.map(b=>b.nombre).join(', ')}</li>` : ''}
     </ul>
   `;
