@@ -289,7 +289,29 @@
   .receta-item{display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:6px 0; border-bottom:1px dashed var(--border); gap:8px;}
   .receta-item input[type=text]{padding:6px 8px; font-size:12.5px; flex:1;}
   .receta-item input[type=number]{padding:6px 8px; font-size:12.5px; width:80px; text-align:right;}
-  .receta-total{display:flex; justify-content:space-between; font-weight:800; padding-top:10px; margin-top:6px; border-top:2px solid var(--text); color:var(--text);}
+
+  .ing-tabla{display:flex; flex-direction:column; gap:0;}
+  .ing-tabla-header{display:grid; grid-template-columns:1.3fr 1fr 1.2fr 0.8fr; gap:10px; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); padding:0 0 6px 0; border-bottom:1px solid var(--border);}
+  .ing-tabla-fila{display:grid; grid-template-columns:1.3fr 1fr 1.2fr 0.8fr; gap:10px; align-items:center; padding:10px 0; border-bottom:1px dashed var(--border);}
+  .ing-tabla-fila.ing-sin-datos{background:rgba(198,54,42,0.05); border-radius:8px; padding-left:6px; padding-right:6px;}
+  .ing-nombre{display:flex; flex-direction:column; gap:2px;}
+  .ing-nombre small{color:var(--muted); font-size:10.5px;}
+  .ing-campo{display:flex; flex-direction:column; gap:2px;}
+  .ing-campo input[type=number]{padding:6px 8px; font-size:12.5px; width:100%;}
+  .ing-campo small{color:var(--muted); font-size:10.5px;}
+  .ing-costo-input{display:flex; align-items:center; gap:2px;}
+  .ing-costo-input span{font-size:12.5px; color:var(--muted);}
+  @media (max-width: 640px){
+    .ing-tabla-header{display:none;}
+    .ing-tabla-fila{grid-template-columns:1fr; gap:6px; padding:12px 0;}
+  }
+
+  .cc-diff{font-size:12px; font-weight:600; color:var(--muted);}
+  .cc-diff.pos{color:#2f7a4f;}
+  .cc-diff.neg{color:#C6362A;}
+</style>
+
+<style>  .receta-total{display:flex; justify-content:space-between; font-weight:800; padding-top:10px; margin-top:6px; border-top:2px solid var(--text); color:var(--text);}
 
   /* Semanas colapsables */
   .semana{border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden;}
@@ -476,7 +498,7 @@
     <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
     <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingredientes</button>
     <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Productos</button>
-    <button class="tab-btn" data-vista="inventario" onclick="cambiarVista('inventario')"><span class="ico">📦</span>Inventario<span class="nav-badge" id="navBadgeInvSidebar" style="display:none;"></span></button>
+    <button class="tab-btn" data-vista="cajachica" onclick="cambiarVista('cajachica')"><span class="ico">💵</span>Caja chica</button>
     <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
   </nav>
 
@@ -506,6 +528,8 @@
               <select id="t-turno" onchange="alCambiarTurno()">
                 <option value="Mañana">Puesto ambulante · Mañana</option>
                 <option value="Tarde">Puesto ambulante · Tarde</option>
+                <option value="Familia">Familia</option>
+                <option value="Pedido directo">Pedido directo (venta a cualquier persona)</option>
                 <option value="Redes sociales">Redes sociales</option>
               </select>
             </div>
@@ -617,7 +641,7 @@
       <section id="vista-ingredientes" class="vista">
         <div class="card">
           <h2>Ingredientes del lonche</h2>
-          <p class="sub">Costo por pieza de cada insumo, calculado automáticamente con tu compra más reciente (pestaña Compras) y el consumo por pieza definido en Inventario.</p>
+          <p class="sub">Costo por pieza de cada insumo. Se actualiza solo con tu compra más reciente (pestaña Compras); el consumo por pieza y el costo manual de respaldo se editan aquí mismo.</p>
           <div id="listaIngredientes"></div>
           <div id="ocultosIngredientesToggle"></div>
         </div>
@@ -661,33 +685,30 @@
         </div>
       </section>
 
-      <!-- INVENTARIO -->
-      <section id="vista-inventario" class="vista">
+      <!-- CAJA CHICA -->
+      <section id="vista-cajachica" class="vista">
         <div class="card">
-          <h2>Inventario</h2>
-          <p class="sub">
-            Tu alacena virtual. Verde = hay de sobra, amarillo = se está acercando al límite, rojo = ya no hay o está por acabarse.
-            Toca una cajita para ver y ajustar su detalle.
-          </p>
-          <div id="alertaInventario"></div>
-          <div id="listaInventario" class="inv-secciones"></div>
-          <div id="ocultosInventarioToggle"></div>
-          <button class="btn secundario" style="margin-top:14px;" onclick="agregarInsumoInventario()">+ Agregar insumo</button>
+          <h2>Caja chica</h2>
+          <p class="sub">Cada domingo cuenta el efectivo que hay en caja y regístralo aquí. La app compara contra el conteo de la semana anterior y te dice si hubo excedente o faltante.</p>
+          <label>Fecha del conteo</label>
+          <input type="date" id="cc-fecha">
+          <label>Efectivo contado en caja ($)</label>
+          <input type="number" step="0.01" id="cc-monto" placeholder="1500">
+          <label>Nota (opcional)</label>
+          <input type="text" id="cc-nota" placeholder="Ej. incluye cambio para la semana">
+          <button class="btn" onclick="agregarCajaChica()">+ Registrar conteo</button>
+        </div>
+        <div class="card">
+          <h2>Historial de conteos</h2>
+          <div id="listaCajaChica"></div>
         </div>
       </section>
-
-      <div class="inv-modal-overlay" id="invModalOverlay" onclick="if(event.target===this) cerrarDetalleInsumo()">
-        <div class="inv-modal">
-          <button class="inv-modal-cierre" onclick="cerrarDetalleInsumo()" aria-label="Cerrar"></button>
-          <div id="invModalContenido"></div>
-        </div>
-      </div>
 
       <!-- RESUMEN -->
       <section id="vista-resumen" class="vista">
         <div class="card">
           <h2>Análisis ejecutivo</h2>
-          <p class="sub">Qué tan saludable está el negocio ahorita, en una mirada rápida</p>
+          <p class="sub">Qué tan saludable está el negocio ahorita, en una mirada rápida — se recalcula solo con cada venta, compra o conteo de caja que registras.</p>
           <div id="saludNegocio"></div>
         </div>
 
@@ -700,7 +721,7 @@
             <div class="stat"><div class="num" id="r-ganancia">$0</div><div class="lbl">Ganancia neta</div></div>
           </div>
           <button class="btn secundario" style="margin-top:14px;" onclick="exportarTodo()">⬇️ Exportar todo (para Excel / Claude)</button>
-          <p class="sub" style="margin-top:8px;">Descarga un archivo con toda la información de la app (ventas, compras, ingredientes, productos e inventario). Súbelo a Claude for Excel y pídele que arme las hojas con esos datos.</p>
+          <p class="sub" style="margin-top:8px;">Descarga un archivo con toda la información de la app: ventas, compras, ingredientes/insumos, productos y caja chica. Súbelo a Claude for Excel y pídele que arme las hojas con esos datos.</p>
         </div>
 
         <div class="card">
@@ -714,7 +735,7 @@
         </div>
 
         <div class="card">
-          <h2>Puesto ambulante vs. Redes sociales</h2>
+          <h2>Ventas por canal</h2>
           <p class="sub">Piezas vendidas por canal, del total acumulado</p>
           <div class="chart-wrap"><canvas id="chartCanal" height="180"></canvas></div>
         </div>
@@ -741,7 +762,7 @@
   <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
   <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingr.</button>
   <button class="tab-btn" data-vista="productos" onclick="cambiarVista('productos')"><span class="ico">🍮</span>Prod.</button>
-  <button class="tab-btn" data-vista="inventario" onclick="cambiarVista('inventario')"><span class="ico">📦</span>Invent.<span class="nav-dot" id="navDotInvMobile"></span></button>
+  <button class="tab-btn" data-vista="cajachica" onclick="cambiarVista('cajachica')"><span class="ico">💵</span>Caja</button>
   <button class="tab-btn" data-vista="resumen" onclick="cambiarVista('resumen')"><span class="ico">📊</span>Resumen</button>
 </nav>
 
@@ -798,6 +819,7 @@ let compras = [];
 let ingredientes = [];
 let productos = [];
 let inventario = [];
+let cajaChica = [];
 let semanasAbiertas = new Set();
 let diasAbiertos = new Set();
 let turnosAbiertos = new Set();
@@ -901,7 +923,11 @@ function inventarioSemilla(){
   ];
 }
 
-function hoyISO(){ return new Date().toISOString().slice(0,10); }
+function hoyISO(){
+  // Fecha de HOY en horario de Jalisco/CDMX (America/Mexico_City, UTC-6 todo el año),
+  // no en UTC — así no se recorre al día siguiente por la tarde/noche.
+  return new Intl.DateTimeFormat('en-CA', {timeZone:'America/Mexico_City', year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
+}
 
 /* ---------- Clima: temperatura del turno (Open-Meteo, sin API key) ----------
    Mañana = ventas de 8:00 a 9:30 -> promedio de las 8:00 y 9:00
@@ -1031,37 +1057,37 @@ function costoUnitarioPorNombreCompra(nombre){
   return masReciente.costo / masReciente.cantidad;
 }
 
-/* Costo por unidad de conteo ($/g, $/ml, $/hoja...) de un insumo del
-   Inventario, a partir de la compra más reciente vinculada a ese insumo
-   (por inventarioIdx si existe, si no por nombre) y su equivalencia. */
+/* Costo por unidad de conteo ($/g, $/ml, $/hoja...) de un insumo, a partir
+   de la compra más reciente vinculada a ese insumo (por inventarioIdx si
+   existe, si no por nombre). Si no hay ninguna compra registrada todavía,
+   cae al costo manual de respaldo capturado directamente en la pestaña
+   Ingredientes (item.costoManualPorUnidadCompra, ej. "$89 el kilogramo"). */
 function costoPorUnidadConteoInsumo(item){
   const idx = inventario.indexOf(item);
   let candidatas = comprasActivas().filter(c => c.inventarioIdx === idx && (parseFloat(c.cantidad)||0) > 0);
   if(candidatas.length === 0){
     candidatas = comprasActivas().filter(c => normNombre(c.nombre) === normNombre(item.nombre) && (parseFloat(c.cantidad)||0) > 0);
   }
-  if(candidatas.length === 0) return null;
-  candidatas.sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
-  const costoPorUnidadCompra = candidatas[0].costo / candidatas[0].cantidad;
   const equivalencia = parseFloat(item.equivalencia) || 1;
-  return costoPorUnidadCompra / equivalencia;
+  if(candidatas.length > 0){
+    candidatas.sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+    const costoPorUnidadCompra = candidatas[0].costo / candidatas[0].cantidad;
+    return {costoPorUnidadCompra: costoPorUnidadCompra / equivalencia, fuente:'compra'};
+  }
+  const manual = parseFloat(item.costoManualPorUnidadCompra);
+  if(manual > 0){
+    return {costoPorUnidadCompra: manual / equivalencia, fuente:'manual'};
+  }
+  return null;
 }
 
 /* Detalle de costeo de un insumo del lonche: cuánto cuesta la porción que
-   lleva cada pieza, y de dónde salió ese costo (compra real o, si todavía
-   no hay compra registrada para ese insumo, el valor manual de respaldo
-   guardado en "ingredientes" para no dejar el costo en $0 silenciosamente). */
+   lleva cada pieza, y de dónde salió ese costo. */
 function detalleCostoInsumoLonche(item){
   const consumoPorPieza = parseFloat(item.consumoPorPieza) || 0;
-  const costoUnidad = costoPorUnidadConteoInsumo(item);
-  if(costoUnidad !== null){
-    return {costoPieza: costoUnidad * consumoPorPieza, fuente:'compra'};
-  }
-  const respaldo = ingredientesActivos().find(ing => normNombre(ing.nombre).includes(normNombre(item.nombre)));
-  if(respaldo){
-    return {costoPieza: respaldo.costo || 0, fuente:'manual'};
-  }
-  return {costoPieza: 0, fuente:'sin_datos'};
+  const detalle = costoPorUnidadConteoInsumo(item);
+  if(detalle === null) return {costoPieza: 0, fuente:'sin_datos'};
+  return {costoPieza: detalle.costoPorUnidadCompra * consumoPorPieza, fuente: detalle.fuente};
 }
 
 function costoInsumosLonche(){
@@ -1070,14 +1096,17 @@ function costoInsumosLonche(){
     .reduce((total, item) => total + detalleCostoInsumoLonche(item).costoPieza, 0);
 }
 
-/* Costo base por pieza de un producto (pastel, chocoflan...): toma la
-   compra más reciente registrada con ese mismo nombre (costo del lote ÷
-   piezas compradas); si todavía no hay compra registrada, cae al
-   costoLote/piezasLote capturados a mano en la ficha del producto. */
+/* Costo base por pieza de un producto (pastel, chocoflan...): Oz compra el
+   PASTEL COMPLETO (ej. 1 pza por $169 en Costco) y lo corta en varias
+   rebanadas (piezasLote, ej. 12). El costo por rebanada = costo del lote
+   más reciente ÷ (cantidad de lotes comprados × piezas por lote) — nunca
+   el costo del lote completo tal cual, o el margen sale negativo. Si
+   todavía no hay compra registrada, cae al costoLote/piezasLote manual. */
 function costoBaseProducto(p){
-  const costoCompra = costoUnitarioPorNombreCompra(p.nombre);
-  if(costoCompra !== null) return {costoPieza: costoCompra, fuente:'compra'};
-  const manual = p.piezasLote>0 ? (p.costoLote/p.piezasLote) : 0;
+  const costoCompra = costoUnitarioPorNombreCompra(p.nombre); // $ por lote/pastel comprado
+  const piezasLote = parseFloat(p.piezasLote) || 1;
+  if(costoCompra !== null) return {costoPieza: costoCompra / piezasLote, fuente:'compra'};
+  const manual = piezasLote>0 ? (p.costoLote/piezasLote) : 0;
   return {costoPieza: manual, fuente:'manual'};
 }
 
@@ -1172,17 +1201,26 @@ async function init(){
   if(inventario === null){ inventario = inventarioSemilla(); await guardar('inventario', inventario); }
   else {
     // Migración: el consumo de carne de cerdo por lonche estaba capturado a
-    // 83g (heredado del costeo viejo); el consumo real es 30g.
-    let migradoCarne = false;
+    // 83g (heredado del costeo viejo); el consumo real es 30g. Además, si
+    // no hay costo manual de respaldo capturado para la carne, se deja en
+    // $89/kg (el precio más reciente que reportó Oz) para que no quede en $0.
+    let migrado = false;
     inventario = inventario.map(item=>{
+      let nuevo = item;
       if(normNombre(item.nombre)==='carne de cerdo' && parseFloat(item.consumoPorPieza)===83){
-        migradoCarne = true;
-        return {...item, consumoPorPieza:30};
+        nuevo = {...nuevo, consumoPorPieza:30};
+        migrado = true;
       }
-      return item;
+      if(normNombre(item.nombre)==='carne de cerdo' && !(parseFloat(item.costoManualPorUnidadCompra)>0)){
+        nuevo = {...nuevo, costoManualPorUnidadCompra:89};
+        migrado = true;
+      }
+      return nuevo;
     });
-    if(migradoCarne) await guardar('inventario', inventario);
+    if(migrado) await guardar('inventario', inventario);
   }
+
+  cajaChica = await cargar('cajaChica', []);
 
   // abrir la semana mas reciente por default (ventas, ganancias y compras)
   if(ventas.length){
@@ -1203,7 +1241,7 @@ async function init(){
   renderConteoProductos();
   renderIngredientes();
   renderProductos();
-  renderInventario();
+  renderCajaChica();
   renderTodo();
 }
 
@@ -1543,7 +1581,14 @@ function actualizarResumenConteo(idx){
 function alCambiarTurno(){
   const turno = document.getElementById('t-turno').value;
   const wrap = document.getElementById('t-hora-wrap');
-  if(wrap) wrap.style.display = (turno==='Redes sociales') ? 'block' : 'none';
+  const esPuesto = (turno==='Mañana' || turno==='Tarde');
+  if(wrap) wrap.style.display = esPuesto ? 'none' : 'block';
+}
+
+/* El campo "turno" del formulario en realidad guarda el CANAL cuando la venta
+   no es del puesto ambulante (Familia, Redes sociales, Pedido directo). */
+function canalDeTurno(turno){
+  return (turno==='Mañana' || turno==='Tarde') ? 'Puesto ambulante' : turno;
 }
 
 /* ---------- Navegación ---------- */
@@ -1552,9 +1597,10 @@ function cambiarVista(v){
   document.getElementById('vista-'+v).classList.add('activa');
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('activo'));
   document.querySelectorAll(`.tab-btn[data-vista="${v}"]`).forEach(b=>b.classList.add('activo'));
-  if(v==='resumen'){ renderResumen(); dibujarGraficos(); }
+  if(v==='resumen'){ renderResumen(); dibujarGraficos(); renderSaludEjecutivo(); }
   if(v==='ventas') renderConteoProductos();
   if(v==='ganancias') renderGanancias();
+  if(v==='cajachica') renderCajaChica();
 }
 
 let toastTimer = null;
@@ -1579,8 +1625,8 @@ function cerrarToast(){
 async function registrarTurno(){
   const turno = document.getElementById('t-turno').value;
   const fecha = document.getElementById('t-fecha').value || hoyISO();
-  const canal = turno==='Redes sociales' ? 'Redes sociales' : 'Puesto ambulante';
-  const hora = turno==='Redes sociales' ? (document.getElementById('t-hora').value || null) : null;
+  const canal = canalDeTurno(turno);
+  const hora = canal==='Puesto ambulante' ? null : (document.getElementById('t-hora').value || null);
   const lista = productosVendibles();
   let algo = false;
   const nuevas = [];
@@ -1765,7 +1811,7 @@ function renderVentas(){
                   </div>
                   ${detalleAbierto ? `
                     <div class="item-detalle">
-                      Canal: <b>${v.canal || (v.turno==='Redes sociales' ? 'Redes sociales' : 'Puesto ambulante')}</b>${v.horaVenta ? ` · Hora: <b>${v.horaVenta}</b>` : ''}<br>
+                      Canal: <b>${v.canal || canalDeTurno(v.turno)}</b>${v.horaVenta ? ` · Hora: <b>${v.horaVenta}</b>` : ''}<br>
                       ${v.llevadas!==undefined ? `Llevaste: <b>${v.llevadas}</b> · Sobraron: <b>${v.sobrantes||0}</b>${v.merma ? ` (merma real: <b>${v.merma}</b>, guardado para después: <b>${(v.sobrantes||0)-v.merma}</b>)` : (v.sobrantes ? ' (se guarda para vender después)' : '')} · Cortesía: <b>${v.cortesias||0}</b><br>` : ''}
                       Vendiste: <b>${v.cantidad}</b> · Precio unitario: <b>$${v.precio}</b> · Total: <b>$${(v.cantidad*v.precio).toLocaleString()}</b>
                       ${(v.tempC!==undefined && v.tempC!==null) ? `<br>Temperatura del turno: <b>${v.tempC}°C</b>` : ''}
@@ -2150,33 +2196,59 @@ function toggleOcultosIngredientes(){
 
 function renderIngredientes(){
   const cont = document.getElementById('listaIngredientes');
-  const insumosLonche = inventarioActivo().filter(item => item.aplicaA === 'lonche');
+  const insumosLonche = inventario
+    .map((item, idx) => ({item, idx}))
+    .filter(({item}) => !item.eliminado && item.aplicaA === 'lonche');
 
   if(insumosLonche.length === 0){
-    cont.innerHTML = '<p class="vacio">No hay insumos marcados como "lonche" en Inventario todavía</p>';
+    cont.innerHTML = '<p class="vacio">No hay insumos del lonche configurados todavía</p>';
   } else {
-    cont.innerHTML = insumosLonche.map((item)=>{
-      const {costoPieza, fuente} = detalleCostoInsumoLonche(item);
-      const etiquetaFuente = fuente==='compra' ? 'desde tu compra más reciente'
-        : fuente==='manual' ? 'valor manual (aún sin compra registrada de este insumo)'
-        : 'sin datos — registra una compra de este insumo';
-      return `
-      <div class="receta-item">
-        <div class="izq" style="flex:1;">
-          <b>${item.nombre}</b>
-          <span>${(parseFloat(item.consumoPorPieza)||0)} ${item.unidadConteo||''}/pza · ${etiquetaFuente}</span>
+    cont.innerHTML = `
+      <div class="ing-tabla">
+        <div class="ing-tabla-header">
+          <span>Insumo</span><span>Consumo/pza</span><span>Costo por unidad de compra</span><span>Costo/pza</span>
         </div>
-        <span class="pill">$${costoPieza.toFixed(2)}</span>
+        ${insumosLonche.map(({item, idx})=>{
+          const {costoPieza, fuente} = detalleCostoInsumoLonche(item);
+          const etiquetaFuente = fuente==='compra' ? '🛒 automático, desde tu compra más reciente'
+            : fuente==='manual' ? '✍️ valor manual de respaldo'
+            : '⚠️ sin datos — captura un costo manual abajo';
+          return `
+          <div class="ing-tabla-fila ${fuente==='sin_datos'?'ing-sin-datos':''}">
+            <div class="ing-nombre"><b>${item.nombre}</b><small>${etiquetaFuente}</small></div>
+            <div class="ing-campo">
+              <input type="number" step="0.01" value="${parseFloat(item.consumoPorPieza)||0}" onchange="actualizarConsumoInsumo(${idx}, this.value)">
+              <small>${item.unidadConteo||''} / pza</small>
+            </div>
+            <div class="ing-campo">
+              <div class="ing-costo-input"><span>$</span><input type="number" step="0.01" placeholder="ej. 89" value="${item.costoManualPorUnidadCompra!=null ? item.costoManualPorUnidadCompra : ''}" onchange="actualizarCostoManualInsumo(${idx}, this.value)"></div>
+              <small>por ${item.unidadCompra||'unidad'}</small>
+            </div>
+            <span class="pill">$${costoPieza.toFixed(3)}</span>
+          </div>`;
+        }).join('')}
       </div>
     `;
-    }).join('');
   }
 
   document.getElementById('ocultosIngredientesToggle').innerHTML =
-    '<p class="sub" style="margin-top:8px;">Estos costos ya no se capturan a mano: se recalculan solos con la compra más reciente de cada insumo (pestaña Compras) y el consumo por pieza definido en Inventario.</p>';
+    '<p class="sub" style="margin-top:8px;">El costo por unidad se actualiza solo en cuanto registras una compra de ese insumo en la pestaña Compras (usando el mismo nombre). Mientras no haya compra registrada, se usa el costo manual de respaldo que captures aquí — ej. si el kilo de carne te costó $89, pon 89 en su fila.</p>';
 
   renderTotalesIngredientes();
   renderConteoProductos();
+}
+
+async function actualizarConsumoInsumo(idx, valor){
+  inventario[idx].consumoPorPieza = parseFloat(valor) || 0;
+  await guardar('inventario', inventario);
+  renderIngredientes();
+}
+
+async function actualizarCostoManualInsumo(idx, valor){
+  const v = parseFloat(valor);
+  inventario[idx].costoManualPorUnidadCompra = (v>0) ? v : null;
+  await guardar('inventario', inventario);
+  renderIngredientes();
 }
 
 function renderTotalesIngredientes(){
@@ -2222,7 +2294,7 @@ async function agregarProducto(){
   renderProductos();
 }
 async function actualizarProducto(idx, campo, valor){
-  if(campo==='nombre') productos[idx].nombre = valor;
+  if(campo==='nombre' || campo==='proveedor') productos[idx][campo] = valor;
   else productos[idx][campo] = parseFloat(valor)||0;
   await guardar('productos', productos);
   renderProductos(idx);
@@ -2325,7 +2397,9 @@ function renderProductos(){
           <input type="number" step="0.01" value="${p.precioVenta}" ${p.eliminado?'disabled':''} onchange="actualizarProducto(${idx},'precioVenta',this.value)">
         </div>
       </div>
-      <p class="sub" style="margin-top:2px;">Para que el costo se actualice solo, registra la compra de este producto en la pestaña Compras usando <b>exactamente el mismo nombre</b> (ej. "${p.nombre}"), con la cantidad de piezas del lote y el costo total.</p>
+      <label style="margin-top:8px;display:block;">Proveedor habitual (opcional — puede variar)</label>
+      <input type="text" list="lista-proveedores-conocidos" value="${p.proveedor||''}" ${p.eliminado?'disabled':''} placeholder="Ej. Costco" onchange="actualizarProducto(${idx},'proveedor',this.value)">
+      <p class="sub" style="margin-top:2px;">Para que el costo se actualice solo, registra la compra de este producto en la pestaña Compras usando <b>exactamente el mismo nombre</b> (ej. "${p.nombre}"), con la cantidad de piezas del lote (no de rebanadas) y el costo total.</p>
 
       <h3>Empaque / extras por pieza</h3>
       <p class="sub" style="margin:-4px 0 8px 0;">Si registras una compra con el mismo nombre que un extra (ej. "Charolita"), su costo se actualiza solo; si no, se usa el $ capturado aquí abajo.</p>
@@ -2443,13 +2517,23 @@ function renderSaludEjecutivo(){
     tendenciaTxt = 'sin datos de la semana anterior para comparar';
   }
 
-  const bajosInventario = inventario
-    .map((item,idx)=>({...item, stock: stockCalculado(item, idx)}))
-    .filter(item => !item.eliminado && item.stock <= (parseFloat(item.puntoReorden)||0));
-
   const mermaSemana = activas
     .filter(v => diasSemanaRef.includes(v.fecha))
     .reduce((s,v)=>s+(v.merma||0),0);
+
+  const ccOrdenada = cajaChicaActiva();
+  let ccTxt = '';
+  if(ccOrdenada.length>0){
+    const ultimo = ccOrdenada[ccOrdenada.length-1];
+    const anterior = ccOrdenada[ccOrdenada.length-2];
+    if(anterior){
+      const diff = ultimo.monto - anterior.monto;
+      const signo = diff>0?'+':'';
+      ccTxt = `<li>💵 Último conteo de caja (${fmtFecha(ultimo.fecha)}): <b>$${ultimo.monto.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b> · ${signo}$${diff.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} vs. semana anterior</li>`;
+    } else {
+      ccTxt = `<li>💵 Último conteo de caja (${fmtFecha(ultimo.fecha)}): <b>$${ultimo.monto.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></li>`;
+    }
+  }
 
   cont.innerHTML = `
     <span class="salud-badge ${estado}">${icono} ${etiqueta}</span>
@@ -2460,9 +2544,30 @@ function renderSaludEjecutivo(){
       <li>${diasCubiertos} de ${totalDias} días trabajados esta semana cubrieron el punto de equilibrio diario (~$${costoFijoDiario.toFixed(2)})</li>
       <li>Punto de equilibrio actual: equivalente a ~10 lonches al día, según el margen neto vigente del Lonche</li>
       ${mermaSemana>0 ? `<li>🗑️ Merma real esta semana (piezas tiradas, no las que se guardaron para vender después): <b>${mermaSemana}</b></li>` : ''}
-      ${bajosInventario.length>0 ? `<li>⚠️ ${bajosInventario.length} insumo${bajosInventario.length>1?'s':''} por agotarse: ${bajosInventario.map(b=>b.nombre).join(', ')}</li>` : ''}
+      ${ccTxt}
     </ul>
   `;
+}
+
+/* Días sin ningún registro no deben graficarse como 0: se mantienen en el
+   último valor conocido hasta el siguiente día con datos. */
+function rangoFechasContinuo(dias){
+  if(dias.length===0) return [];
+  const ordenados = [...dias].sort();
+  const ini = new Date(ordenados[0]+'T00:00:00');
+  const fin = new Date(ordenados[ordenados.length-1]+'T00:00:00');
+  const out = [];
+  for(let d=new Date(ini); d<=fin; d.setDate(d.getDate()+1)){
+    out.push(d.toISOString().slice(0,10));
+  }
+  return out;
+}
+function serieRellenada(diasContinuos, porDiaObj, valorInicial=0){
+  let ultimo = valorInicial;
+  return diasContinuos.map(d=>{
+    if(Object.prototype.hasOwnProperty.call(porDiaObj, d)) ultimo = porDiaObj[d];
+    return ultimo;
+  });
 }
 
 let charts = {};
@@ -2470,44 +2575,51 @@ function dibujarGraficos(){
   const porDia = {};
   const porDiaTurno = {};
   const porProducto = {};
-  const porCanal = {'Puesto ambulante':0, 'Redes sociales':0};
+  const porCanal = {'Puesto ambulante':0, 'Familia':0, 'Redes sociales':0, 'Pedido directo':0};
   ventasActivas().forEach(v=>{
     porDia[v.fecha] = (porDia[v.fecha]||0) + v.cantidad;
     if(!porDiaTurno[v.fecha]) porDiaTurno[v.fecha] = {'Mañana':0,'Tarde':0};
-    porDiaTurno[v.fecha][v.turno] = (porDiaTurno[v.fecha][v.turno]||0) + v.cantidad;
+    if(v.turno==='Mañana' || v.turno==='Tarde') porDiaTurno[v.fecha][v.turno] = (porDiaTurno[v.fecha][v.turno]||0) + v.cantidad;
     porProducto[v.producto] = (porProducto[v.producto]||0) + v.cantidad;
-    const canal = v.canal || (v.turno==='Redes sociales' ? 'Redes sociales' : 'Puesto ambulante');
+    const canal = v.canal || canalDeTurno(v.turno);
     porCanal[canal] = (porCanal[canal]||0) + v.cantidad;
   });
   const diasOrdenados = Object.keys(porDia).sort();
+  const diasContinuos = rangoFechasContinuo(diasOrdenados);
 
   const paleta = { salsa:'#C6362A', naranja:'#E8923A', naranjaClaro:'#F2A459', menta:'#7BAF97', cafe:'#1F4A42' };
 
   if(charts.dias) charts.dias.destroy();
   charts.dias = new Chart(document.getElementById('chartDias'), {
     type:'line',
-    data:{ labels:diasOrdenados.map(fmtFecha), datasets:[{
+    data:{ labels:diasContinuos.map(fmtFecha), datasets:[{
       label:'Piezas vendidas',
-      data:diasOrdenados.map(d=>porDia[d]),
+      data:serieRellenada(diasContinuos, porDia, 0),
       borderColor:paleta.salsa, backgroundColor:paleta.salsa,
       tension:0.3, pointRadius:4, pointBackgroundColor:paleta.salsa, fill:false
     }] },
     options:{ plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, ticks:{stepSize:5}} } }
   });
 
+  const porDiaManana = {}, porDiaTarde = {};
+  Object.keys(porDiaTurno).forEach(d=>{
+    porDiaManana[d] = porDiaTurno[d]['Mañana']||0;
+    porDiaTarde[d] = porDiaTurno[d]['Tarde']||0;
+  });
+
   if(charts.turno) charts.turno.destroy();
   charts.turno = new Chart(document.getElementById('chartTurno'), {
     type:'line',
-    data:{ labels:diasOrdenados.map(fmtFecha), datasets:[
+    data:{ labels:diasContinuos.map(fmtFecha), datasets:[
       {
         label:'Mañana',
-        data:diasOrdenados.map(d=>porDiaTurno[d]['Mañana']||0),
+        data:serieRellenada(diasContinuos, porDiaManana, 0),
         borderColor:paleta.naranjaClaro, backgroundColor:paleta.naranjaClaro,
         tension:0.3, pointRadius:4, pointBackgroundColor:paleta.naranjaClaro, fill:false
       },
       {
         label:'Tarde',
-        data:diasOrdenados.map(d=>porDiaTurno[d]['Tarde']||0),
+        data:serieRellenada(diasContinuos, porDiaTarde, 0),
         borderColor:paleta.salsa, backgroundColor:paleta.salsa,
         tension:0.3, pointRadius:4, pointBackgroundColor:paleta.salsa, fill:false
       }
@@ -2524,11 +2636,12 @@ function dibujarGraficos(){
   });
 
   if(charts.canal) charts.canal.destroy();
+  const canalesConDatos = Object.entries(porCanal).filter(([,v])=>v>0);
   charts.canal = new Chart(document.getElementById('chartCanal'), {
     type:'doughnut',
     data:{
-      labels: Object.keys(porCanal),
-      datasets:[{ data:Object.values(porCanal), backgroundColor:[paleta.cafe, paleta.naranja] }]
+      labels: canalesConDatos.map(([k])=>k),
+      datasets:[{ data:canalesConDatos.map(([,v])=>v), backgroundColor:[paleta.cafe, paleta.naranja, paleta.menta, paleta.naranjaClaro] }]
     },
     options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
   });
@@ -2609,10 +2722,72 @@ function renderTodo(){
   renderCompras();
   renderResumen();
   renderGanancias();
-  renderInventario();
+  renderCajaChica();
 }
 
-/* ---------- Exportar todo a un solo archivo, para pasárselo a Claude for Excel ---------- */
+/* ---------- Caja chica: conteo semanal (domingos) con comparativo contra
+   la semana anterior ---------- */
+async function agregarCajaChica(){
+  const fecha = document.getElementById('cc-fecha').value || hoyISO();
+  const monto = parseFloat(document.getElementById('cc-monto').value);
+  const nota = document.getElementById('cc-nota').value.trim();
+  if(!(monto>=0)){ toast('Captura el monto contado'); return; }
+
+  cajaChica.push({fecha, monto, nota});
+  await guardar('cajaChica', cajaChica);
+  document.getElementById('cc-monto').value = '';
+  document.getElementById('cc-nota').value = '';
+  toast('Conteo registrado ✓');
+  renderCajaChica();
+  if(document.getElementById('vista-resumen')?.classList.contains('activa')) renderSaludEjecutivo();
+}
+
+async function borrarCajaChica(idx){
+  cajaChica.splice(idx,1);
+  await guardar('cajaChica', cajaChica);
+  renderCajaChica();
+}
+
+function cajaChicaActiva(){
+  return [...cajaChica].sort((a,b)=> a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0));
+}
+
+function renderCajaChica(){
+  const cont = document.getElementById('listaCajaChica');
+  if(!cont) return;
+  const ordenados = cajaChicaActiva();
+  if(ordenados.length===0){
+    cont.innerHTML = '<p class="vacio">Aún no hay conteos de caja registrados</p>';
+    return;
+  }
+  const filas = [...ordenados].reverse().map((c,i)=>{
+    const idxReal = cajaChica.indexOf(c);
+    const anterior = ordenados[ordenados.indexOf(c)-1];
+    let comparativo = '';
+    if(anterior){
+      const diff = c.monto - anterior.monto;
+      const signo = diff>0 ? '+' : '';
+      const clase = diff>0 ? 'pos' : (diff<0 ? 'neg' : '');
+      const etiqueta = diff>0 ? 'Excedente vs. semana anterior' : (diff<0 ? 'Diferencia (faltante) vs. semana anterior' : 'Sin cambio vs. semana anterior');
+      comparativo = `<span class="cc-diff ${clase}">${signo}$${diff.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} · ${etiqueta}</span>`;
+    } else {
+      comparativo = '<span class="cc-diff">Primer conteo registrado</span>';
+    }
+    return `
+    <div class="receta-item" style="flex-direction:column; align-items:stretch; gap:4px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <b>${fmtFecha(c.fecha)}</b>
+          <span style="margin-left:8px;">$${c.monto.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+          ${c.nota ? `<br><small style="color:var(--muted);">${c.nota}</small>` : ''}
+        </div>
+        <button class="del" onclick="borrarCajaChica(${idxReal})">✕</button>
+      </div>
+      ${comparativo}
+    </div>`;
+  }).join('');
+  cont.innerHTML = filas;
+}
 function exportarTodo(){
   const paquete = {
     exportado: new Date().toISOString(),
@@ -2621,7 +2796,8 @@ function exportarTodo(){
     compras: compras,
     ingredientes: ingredientes,
     productos: productos,
-    inventario: inventario
+    inventario: inventario,
+    cajaChica: cajaChica
   };
   const blob = new Blob([JSON.stringify(paquete, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
