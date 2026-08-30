@@ -127,6 +127,14 @@
     font-size:14.5px;
     font-family:inherit;
   }
+  select{
+    background:#ececec;
+    border-color:#c7c7c7;
+    color:var(--text);
+    cursor:pointer;
+  }
+  select:hover{background:#e2e2e2;}
+  select#t-turno{background:#dcdcdc; border-color:#b5b5b5; font-weight:600;}
   input:focus, select:focus{outline:none; border-color:var(--sidebar-bg);}
 
   .btn{
@@ -291,9 +299,10 @@
   .receta-item input[type=number]{padding:6px 8px; font-size:12.5px; width:80px; text-align:right;}
 
   .ing-tabla{display:flex; flex-direction:column; gap:0;}
-  .ing-tabla-header{display:grid; grid-template-columns:1.3fr 1fr 1.2fr 0.8fr; gap:10px; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); padding:0 0 6px 0; border-bottom:1px solid var(--border);}
-  .ing-tabla-fila{display:grid; grid-template-columns:1.3fr 1fr 1.2fr 0.8fr; gap:10px; align-items:center; padding:10px 0; border-bottom:1px dashed var(--border);}
+  .ing-tabla-header{display:grid; grid-template-columns:1.1fr 0.8fr 0.9fr 1.1fr 0.7fr 0.5fr; gap:10px; font-size:11px; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); padding:0 0 6px 0; border-bottom:1px solid var(--border);}
+  .ing-tabla-fila{display:grid; grid-template-columns:1.1fr 0.8fr 0.9fr 1.1fr 0.7fr 0.5fr; gap:10px; align-items:center; padding:10px 0; border-bottom:1px dashed var(--border);}
   .ing-tabla-fila.ing-sin-datos{background:rgba(198,54,42,0.05); border-radius:8px; padding-left:6px; padding-right:6px;}
+  .ing-acciones{display:flex; justify-content:flex-end; gap:2px;}
   .ing-nombre{display:flex; flex-direction:column; gap:2px;}
   .ing-nombre small{color:var(--muted); font-size:10.5px;}
   .ing-campo{display:flex; flex-direction:column; gap:2px;}
@@ -304,6 +313,7 @@
   @media (max-width: 640px){
     .ing-tabla-header{display:none;}
     .ing-tabla-fila{grid-template-columns:1fr; gap:6px; padding:12px 0;}
+    .ing-acciones{justify-content:flex-start;}
   }
 
   .cc-diff{font-size:12px; font-weight:600; color:var(--muted);}
@@ -640,10 +650,11 @@
       <!-- INGREDIENTES (costeo del lonche) -->
       <section id="vista-ingredientes" class="vista">
         <div class="card">
-          <h2>Ingredientes del lonche</h2>
-          <p class="sub">Costo por pieza de cada insumo. Se actualiza solo con tu compra más reciente (pestaña Compras); el consumo por pieza y el costo manual de respaldo se editan aquí mismo.</p>
+          <h2>Ingredientes / insumos</h2>
+          <p class="sub">Tabla completa de todos los insumos (del Lonche y de los demás productos), con su costo por pieza. Se actualiza solo con tu compra más reciente (pestaña Compras); el consumo por pieza y el costo manual de respaldo se editan aquí mismo.</p>
           <div id="listaIngredientes"></div>
           <div id="ocultosIngredientesToggle"></div>
+          <button class="btn secundario chico" style="margin-top:12px;width:100%;" onclick="agregarInsumo()">+ Agregar insumo</button>
         </div>
 
         <div class="card">
@@ -833,6 +844,7 @@ let mostrarOcultosVentas = false;
 let mostrarOcultosCompras = false;
 let mostrarOcultosIngredientes = false;
 let mostrarOcultosProductos = false;
+let mostrarOcultosCajaChica = false;
 let mostrarOcultosInventario = false;
 
 function ventasActivas(){ return ventas.filter(v=>!v.eliminado); }
@@ -856,7 +868,7 @@ const VENTAS_SEMILLA = [
 ];
 
 const INGREDIENTES_SEMILLA = [
-  {nombre:'Birote (pieza $8, rinde 2 tiras)', costo:4},
+  {nombre:'Bolillo (pieza $8, rinde 2 tiras)', costo:4},
   {nombre:'Carne de cerdo (~30g)', costo:3.61},
   {nombre:'Jitomate (~83g)', costo:1.70},
   {nombre:'Puré de tomate (~83g)', costo:1.35},
@@ -893,12 +905,12 @@ const PRODUCTOS_SEMILLA = [
 function inventarioSemilla(){
   const hoy = hoyISO();
   return [
-    {nombre:'Birote',          grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'pza',     unidadConteo:'tira', equivalencia:2,    consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:6},
+    {nombre:'Bolillo',         grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'pza',     unidadConteo:'tira', equivalencia:2,    consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:6},
     {nombre:'Carne de cerdo',  grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:30,   stockInicial:0, fechaInicial:hoy, puntoReorden:500},
     {nombre:'Cebolla',         grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:10,   stockInicial:0, fechaInicial:hoy, puntoReorden:200},
     {nombre:'Ajo',             grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:3,    stockInicial:0, fechaInicial:hoy, puntoReorden:100},
     {nombre:'Sal',             grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'kg',      unidadConteo:'g',    equivalencia:1000, consumoPorPieza:5,    stockInicial:0, fechaInicial:hoy, puntoReorden:200},
-    {nombre:'Contenedores',    grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:25,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:15},
+    {nombre:'Bolsa plástica',  grupo:['Lonche y empaque'],            aplicaA:'lonche',   unidadCompra:'paquete', unidadConteo:'pza',  equivalencia:25,   consumoPorPieza:1,    stockInicial:0, fechaInicial:hoy, puntoReorden:15},
 
     /* La mayonesa se usa tanto en el aderezo como en la salsa (receta oficial):
        es UN solo insumo con stock compartido — aparece en las dos secciones,
@@ -984,8 +996,11 @@ async function obtenerTemperatura(fecha, turno){
 }
 
 async function completarTemperaturasFaltantes(){
-  const faltantes = ventas.filter(v=>!v.eliminado && (v.tempC===undefined || v.tempC===null));
-  if(faltantes.length===0){ toast('No hay ventas sin temperatura'); return; }
+  // El clima solo tiene sentido para el puesto ambulante (ubicación y horario
+  // fijos); Familia, Redes sociales y Pedido directo pueden venderse desde
+  // cualquier lado y a cualquier hora, así que se excluyen aquí también.
+  const faltantes = ventas.filter(v=>!v.eliminado && (v.turno==='Mañana' || v.turno==='Tarde') && (v.tempC===undefined || v.tempC===null));
+  if(faltantes.length===0){ toast('No hay ventas del puesto ambulante sin temperatura'); return; }
 
   const combos = Array.from(new Set(faltantes.map(v=>v.fecha+'|'+v.turno)));
   toast(`Consultando clima de ${combos.length} turno(s)...`);
@@ -1034,6 +1049,13 @@ function viernesDeSemana(iso){
 function fmtRango(lun,vie){
   const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   return `${lun.getDate()} - ${vie.getDate()} ${meses[vie.getMonth()]}`;
+}
+/* Clave de semana para agrupar y ordenar (ej. "2026-05", no "2026-5") — sin
+   el padding, el orden alfabético revuelve semana 5 con semana 50, y las
+   semanas de un dígito quedan mal ordenadas contra las de dos dígitos en el
+   mismo año. */
+function claveSemana(anio, semana){
+  return anio + '-' + String(semana).padStart(2,'0');
 }
 
 /* ---------- Costeo dinámico: el costo de cada insumo/producto se calcula
@@ -1215,12 +1237,41 @@ async function init(){
         nuevo = {...nuevo, costoManualPorUnidadCompra:89};
         migrado = true;
       }
+      if(normNombre(item.nombre)==='birote'){
+        nuevo = {...nuevo, nombre:'Bolillo'};
+        migrado = true;
+      }
+      if(normNombre(item.nombre)==='contenedores' && item.aplicaA==='lonche'){
+        nuevo = {...nuevo, nombre:'Bolsa plástica'};
+        migrado = true;
+      }
       return nuevo;
     });
     if(migrado) await guardar('inventario', inventario);
   }
 
   cajaChica = await cargar('cajaChica', []);
+
+  // Migración de una sola vez: todo lo que hasta ahora se había registrado
+  // como "Redes sociales" en realidad eran ventas a Familia — Oz confirmó
+  // que por redes sociales todavía no se ha vendido nada. Se usa una bandera
+  // guardada para que esto corra UNA sola vez y no le cambie el canal a
+  // ventas reales de Redes sociales que se registren de aquí en adelante.
+  {
+    const migraciones = await cargar('migraciones', {});
+    if(!migraciones.redesSocialesAFamilia){
+      let migradoCanal = false;
+      ventas = ventas.map(v=>{
+        if(v.turno==='Redes sociales' || v.canal==='Redes sociales'){
+          migradoCanal = true;
+          return {...v, turno:'Familia', canal:'Familia'};
+        }
+        return v;
+      });
+      if(migradoCanal) await guardar('ventas', ventas);
+      await guardar('migraciones', {...migraciones, redesSocialesAFamilia:true});
+    }
+  }
 
   // Migración: ventas de pasteles registradas antes de corregir el bug de
   // costeo (dividía mal el costo del lote comprado) quedaron con un
@@ -1242,8 +1293,8 @@ async function init(){
   if(ventas.length){
     const masReciente = ventas.map(v=>v.fecha).sort().reverse()[0];
     const {anio,semana} = semanaISO(masReciente);
-    semanasAbiertas.add(anio+'-'+semana);
-    semanasGananciasAbiertas.add(anio+'-'+semana);
+    semanasAbiertas.add(claveSemana(anio,semana));
+    semanasGananciasAbiertas.add(claveSemana(anio,semana));
     diasAbiertos.add(masReciente);
     turnosAbiertos.add(masReciente+'|Mañana');
     turnosAbiertos.add(masReciente+'|Tarde');
@@ -1251,7 +1302,7 @@ async function init(){
   if(compras.length){
     const masRecienteCompra = compras.map(c=>c.fecha).sort().reverse()[0];
     const {anio,semana} = semanaISO(masRecienteCompra);
-    semanasComprasAbiertas.add(anio+'-'+semana);
+    semanasComprasAbiertas.add(claveSemana(anio,semana));
   }
 
   renderConteoProductos();
@@ -1482,7 +1533,7 @@ function renderDetalleInsumo(idx){
   const colorBarra = estado==='rojo' ? 'var(--rojo-neg)' : estado==='amarillo' ? '#D69A1E' : 'var(--verde)';
 
   const acciones = item.eliminado
-    ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarInsumoInventario(${idx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarInsumoInventario(${idx})">🙈</button>`
+    ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarInsumoInventario(${idx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarInsumoInventario(${idx})">Ocultar</button>`
     : `<button class="del" onclick="borrarInsumoInventario(${idx})">✕</button>`;
 
   modal.innerHTML = `
@@ -1558,19 +1609,19 @@ function renderConteoProductos(){
       <div class="grid3">
         <div>
           <label>Llevaste</label>
-          <input type="number" min="0" id="t-llevaste-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
+          <input type="number" min="0" id="t-llevaste-${idx}" placeholder="0" oninput="actualizarResumenConteo(${idx})">
         </div>
         <div>
           <label>Sobraron</label>
-          <input type="number" min="0" id="t-sobraron-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
+          <input type="number" min="0" id="t-sobraron-${idx}" placeholder="0" oninput="actualizarResumenConteo(${idx})">
         </div>
         <div>
           <label>Cortesía</label>
-          <input type="number" min="0" id="t-cortesia-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
+          <input type="number" min="0" id="t-cortesia-${idx}" placeholder="0" oninput="actualizarResumenConteo(${idx})">
         </div>
       </div>
       <label>De lo que sobró, ¿cuánto se tiró (merma real, no lo que guardaste para vender después)?</label>
-      <input type="number" min="0" id="t-merma-${idx}" value="0" oninput="actualizarResumenConteo(${idx})">
+      <input type="number" min="0" id="t-merma-${idx}" placeholder="0" oninput="actualizarResumenConteo(${idx})">
       <div class="conteo-resumen" id="t-resumen-${idx}">Vendiste: 0 · $0</div>
     </div>
   `).join('');
@@ -1679,17 +1730,17 @@ async function registrarTurno(){
   await guardar('ventas', ventas);
 
   lista.forEach((p,idx)=>{
-    document.getElementById(`t-llevaste-${idx}`).value = 0;
-    document.getElementById(`t-sobraron-${idx}`).value = 0;
-    document.getElementById(`t-cortesia-${idx}`).value = 0;
-    if(document.getElementById(`t-merma-${idx}`)) document.getElementById(`t-merma-${idx}`).value = 0;
+    document.getElementById(`t-llevaste-${idx}`).value = '';
+    document.getElementById(`t-sobraron-${idx}`).value = '';
+    document.getElementById(`t-cortesia-${idx}`).value = '';
+    if(document.getElementById(`t-merma-${idx}`)) document.getElementById(`t-merma-${idx}`).value = '';
     actualizarResumenConteo(idx);
   });
   if(document.getElementById('t-hora')) document.getElementById('t-hora').value = '';
 
   const {anio,semana} = semanaISO(fecha);
-  semanasAbiertas.add(anio+'-'+semana);
-  semanasGananciasAbiertas.add(anio+'-'+semana);
+  semanasAbiertas.add(claveSemana(anio,semana));
+  semanasGananciasAbiertas.add(claveSemana(anio,semana));
 
   toast(temp !== null ? `Turno registrado ✓ · ${temp}°C` : 'Turno registrado ✓');
   renderTodo();
@@ -1750,7 +1801,7 @@ function renderVentas(){
     const semGrupos = {};
     visibles.forEach(v=>{
       const {anio,semana} = semanaISO(v.fecha);
-      const claveSem = anio+'-'+semana;
+      const claveSem = claveSemana(anio,semana);
       if(!semGrupos[claveSem]) semGrupos[claveSem] = {anio, semana, items:[], lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha)};
       semGrupos[claveSem].items.push(v);
     });
@@ -1811,7 +1862,7 @@ function renderVentas(){
           const itemsHtml = itemsTurno.map(v=>{
             const detalleAbierto = detalleVentasAbiertos.has(v.i);
             const acciones = v.eliminado
-              ? `<button class="btn-icon restaurar" title="Restaurar" onclick="event.stopPropagation(); restaurarVenta(${v.i})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="event.stopPropagation(); ocultarVenta(${v.i})">🙈</button>`
+              ? `<button class="btn-icon restaurar" title="Restaurar" onclick="event.stopPropagation(); restaurarVenta(${v.i})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="event.stopPropagation(); ocultarVenta(${v.i})">Ocultar</button>`
               : `<button class="del" onclick="event.stopPropagation(); borrarVenta(${v.i})">✕</button>`;
             return `
               <li class="${v.eliminado?'fila-eliminada':''}">
@@ -1931,7 +1982,7 @@ function renderGanancias(){
     ventasG.forEach(v=>{
       const ganancia = v.cantidad * margenNetoVenta(v);
       const {anio,semana} = semanaISO(v.fecha);
-      const claveSem = anio+'-'+semana;
+      const claveSem = claveSemana(anio,semana);
       if(!semGrupos[claveSem]) semGrupos[claveSem] = {anio, semana, lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha), dias:{}, total:0};
       if(!semGrupos[claveSem].dias[v.fecha]) semGrupos[claveSem].dias[v.fecha] = {total:0, productos:{}};
       semGrupos[claveSem].dias[v.fecha].total += ganancia;
@@ -2020,6 +2071,7 @@ async function agregarCompra(){
   const inventarioSel = document.getElementById('c-inventario').value;
   const inventarioIdx = inventarioSel !== '' ? parseInt(inventarioSel) : null;
   if(!nombre || costo<=0){ toast('Completa insumo y costo'); return; }
+  if(cantidad<=0){ toast('Falta la cantidad comprada — sin eso no se puede calcular el costo por unidad'); return; }
 
   const compra = {nombre, cantidad, unidad, costo, fecha};
   if(inventarioIdx !== null) compra.inventarioIdx = inventarioIdx;
@@ -2033,7 +2085,7 @@ async function agregarCompra(){
   document.getElementById('c-inventario').value = '';
 
   const {anio,semana} = semanaISO(fecha);
-  semanasComprasAbiertas.add(anio+'-'+semana);
+  semanasComprasAbiertas.add(claveSemana(anio,semana));
 
   toast(inventarioIdx !== null ? 'Compra agregada ✓ · sumada al inventario' : 'Compra agregada ✓');
   renderTodo();
@@ -2097,6 +2149,7 @@ function toggleDetalleCompra(i){
 
 function renderCompras(){
   actualizarDatalistsCompras();
+  actualizarDropdownInventarioCompras();
   const cont = document.getElementById('listaCompras');
   const visiblesCompras = compras.map((c,i)=>({...c,i})).filter(c=>!c.oculto || mostrarOcultosCompras);
   if(visiblesCompras.length===0){
@@ -2105,7 +2158,7 @@ function renderCompras(){
     const grupos = {};
     visiblesCompras.forEach(c=>{
       const {anio,semana} = semanaISO(c.fecha);
-      const clave = anio+'-'+semana;
+      const clave = claveSemana(anio,semana);
       if(!grupos[clave]) grupos[clave] = {anio, semana, items:[], lun:lunesDeSemana(c.fecha), vie:viernesDeSemana(c.fecha), total:0};
       grupos[clave].items.push(c);
       if(!c.eliminado) grupos[clave].total += c.costo;
@@ -2132,7 +2185,7 @@ function renderCompras(){
                 const detalleAbierto = detalleComprasAbiertos.has(c.i);
                 const costoUnidad = c.cantidad ? (c.costo / c.cantidad) : null;
                 const acciones = c.eliminado
-                  ? `<button class="btn-icon restaurar" title="Restaurar" onclick="event.stopPropagation(); restaurarCompra(${c.i})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="event.stopPropagation(); ocultarCompra(${c.i})">🙈</button>`
+                  ? `<button class="btn-icon restaurar" title="Restaurar" onclick="event.stopPropagation(); restaurarCompra(${c.i})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="event.stopPropagation(); ocultarCompra(${c.i})">Ocultar</button>`
                   : `<button class="del" onclick="event.stopPropagation(); borrarCompra(${c.i})">✕</button>`;
                 return `
                 <li class="${c.eliminado?'fila-eliminada':''}">
@@ -2175,34 +2228,30 @@ function renderCompras(){
   }
 }
 
-/* ---------- Ingredientes / costeo del lonche ---------- */
-async function agregarIngrediente(){
-  ingredientes.push({nombre:'Nuevo ingrediente', costo:0});
-  await guardar('ingredientes', ingredientes);
+/* ---------- Ingredientes / costeo del lonche y demás productos ---------- */
+async function agregarInsumo(){
+  const nombre = prompt('Nombre del nuevo insumo:');
+  if(!nombre) return;
+  inventario.push({nombre, grupo:['Otros'], aplicaA:'lonche', unidadCompra:'pza', unidadConteo:'pza', equivalencia:1, consumoPorPieza:1});
+  await guardar('inventario', inventario);
   renderIngredientes();
 }
-async function actualizarIngrediente(i, campo, valor){
-  if(campo==='costo') ingredientes[i].costo = parseFloat(valor)||0;
-  else ingredientes[i].nombre = valor;
-  await guardar('ingredientes', ingredientes);
-  renderTotalesIngredientes();
-}
-async function borrarIngrediente(i){
-  if(!confirm('¿Eliminar este ingrediente? No se pierde: queda tachado y lo puedes restaurar después.')) return;
-  ingredientes[i].eliminado = true;
-  await guardar('ingredientes', ingredientes);
+async function borrarInsumo(idx){
+  if(!confirm('¿Eliminar este insumo? No se pierde: queda tachado y lo puedes restaurar después.')) return;
+  inventario[idx].eliminado = true;
+  await guardar('inventario', inventario);
   renderIngredientes();
-  toast('Ingrediente eliminado', `restaurarIngrediente(${i})`);
+  toast('Insumo eliminado', `restaurarInsumo(${idx})`);
 }
-async function restaurarIngrediente(i){
-  ingredientes[i].eliminado = false;
-  ingredientes[i].oculto = false;
-  await guardar('ingredientes', ingredientes);
+async function restaurarInsumo(idx){
+  inventario[idx].eliminado = false;
+  inventario[idx].oculto = false;
+  await guardar('inventario', inventario);
   renderIngredientes();
 }
-async function ocultarIngrediente(i){
-  ingredientes[i].oculto = true;
-  await guardar('ingredientes', ingredientes);
+async function ocultarInsumo(idx){
+  inventario[idx].oculto = true;
+  await guardar('inventario', inventario);
   renderIngredientes();
 }
 function toggleOcultosIngredientes(){
@@ -2210,45 +2259,64 @@ function toggleOcultosIngredientes(){
   renderIngredientes();
 }
 
+/* Costeo de un insumo cualquiera (no solo los del lonche) — para mostrarlo
+   en la tabla completa de Ingredientes, aunque solo los que aplican al
+   Lonche entran a la suma de costoInsumosLonche(). */
+function detalleCostoInsumo(item){
+  const consumoPorPieza = parseFloat(item.consumoPorPieza) || 0;
+  const detalle = costoPorUnidadConteoInsumo(item);
+  if(detalle === null) return {costoPieza: 0, fuente:'sin_datos'};
+  return {costoPieza: detalle.costoPorUnidadCompra * consumoPorPieza, fuente: detalle.fuente};
+}
+
 function renderIngredientes(){
   const cont = document.getElementById('listaIngredientes');
-  const insumosLonche = inventario
+  const todos = inventario
     .map((item, idx) => ({item, idx}))
-    .filter(({item}) => !item.eliminado && item.aplicaA === 'lonche');
+    .filter(({item}) => !item.oculto || mostrarOcultosIngredientes);
 
-  if(insumosLonche.length === 0){
-    cont.innerHTML = '<p class="vacio">No hay insumos del lonche configurados todavía</p>';
+  if(todos.length === 0){
+    cont.innerHTML = '<p class="vacio">No hay insumos configurados todavía</p>';
   } else {
     cont.innerHTML = `
       <div class="ing-tabla">
         <div class="ing-tabla-header">
-          <span>Insumo</span><span>Consumo/pza</span><span>Costo por unidad de compra</span><span>Costo/pza</span>
+          <span>Insumo</span><span>Aplica a</span><span>Consumo/pza</span><span>Costo por unidad de compra</span><span>Costo/pza</span><span></span>
         </div>
-        ${insumosLonche.map(({item, idx})=>{
-          const {costoPieza, fuente} = detalleCostoInsumoLonche(item);
+        ${todos.map(({item, idx})=>{
+          const {costoPieza, fuente} = detalleCostoInsumo(item);
           const etiquetaFuente = fuente==='compra' ? '🛒 automático, desde tu compra más reciente'
             : fuente==='manual' ? '✍️ valor manual de respaldo'
-            : '⚠️ sin datos — captura un costo manual abajo';
+            : '⚠️ sin datos — captura un costo manual';
+          const aplicaTxt = item.aplicaA==='lonche' ? 'Lonche' : (item.aplicaA==='pasteles' ? 'Pasteles' : (item.aplicaA==='todos' ? 'Todos los productos' : item.aplicaA));
+          const acciones = item.eliminado
+            ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarInsumo(${idx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarInsumo(${idx})">Ocultar</button>`
+            : `<button class="del" onclick="borrarInsumo(${idx})">✕</button>`;
           return `
-          <div class="ing-tabla-fila ${fuente==='sin_datos'?'ing-sin-datos':''}">
-            <div class="ing-nombre"><b>${item.nombre}</b><small>${etiquetaFuente}</small></div>
+          <div class="ing-tabla-fila ${fuente==='sin_datos'?'ing-sin-datos':''} ${item.eliminado?'fila-eliminada':''}">
+            <div class="ing-nombre"><b>${item.nombre}</b>${item.eliminado?'<span class="etiqueta-eliminado">Eliminado</span>':''}<small>${etiquetaFuente}</small></div>
+            <div class="ing-campo"><small>${aplicaTxt}</small></div>
             <div class="ing-campo">
-              <input type="number" step="0.01" value="${parseFloat(item.consumoPorPieza)||0}" onchange="actualizarConsumoInsumo(${idx}, this.value)">
+              <input type="number" step="0.01" value="${parseFloat(item.consumoPorPieza)||0}" ${item.eliminado?'disabled':''} onchange="actualizarConsumoInsumo(${idx}, this.value)">
               <small>${item.unidadConteo||''} / pza</small>
             </div>
             <div class="ing-campo">
-              <div class="ing-costo-input"><span>$</span><input type="number" step="0.01" placeholder="ej. 89" value="${item.costoManualPorUnidadCompra!=null ? item.costoManualPorUnidadCompra : ''}" onchange="actualizarCostoManualInsumo(${idx}, this.value)"></div>
+              <div class="ing-costo-input"><span>$</span><input type="number" step="0.01" placeholder="ej. 89" value="${item.costoManualPorUnidadCompra!=null ? item.costoManualPorUnidadCompra : ''}" ${item.eliminado?'disabled':''} onchange="actualizarCostoManualInsumo(${idx}, this.value)"></div>
               <small>por ${item.unidadCompra||'unidad'}</small>
             </div>
             <span class="pill">$${costoPieza.toFixed(3)}</span>
+            <div class="ing-acciones">${acciones}</div>
           </div>`;
         }).join('')}
       </div>
     `;
   }
 
-  document.getElementById('ocultosIngredientesToggle').innerHTML =
-    '<p class="sub" style="margin-top:8px;">El costo por unidad se actualiza solo en cuanto registras una compra de ese insumo en la pestaña Compras (usando el mismo nombre). Mientras no haya compra registrada, se usa el costo manual de respaldo que captures aquí — ej. si el kilo de carne te costó $89, pon 89 en su fila.</p>';
+  const n = inventario.filter(item=>item.oculto).length;
+  document.getElementById('ocultosIngredientesToggle').innerHTML = `
+    <p class="sub" style="margin-top:8px;">El costo por unidad se actualiza solo en cuanto registras una compra de ese insumo en la pestaña Compras (usando el mismo nombre). Mientras no haya compra registrada, se usa el costo manual de respaldo que captures aquí — ej. si el kilo de carne te costó $89, pon 89 en su fila.</p>
+    ${n>0 ? `<button class="link-ocultos" onclick="toggleOcultosIngredientes()">${mostrarOcultosIngredientes ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${n})`}</button>` : ''}
+  `;
 
   renderTotalesIngredientes();
   renderConteoProductos();
@@ -2357,9 +2425,21 @@ async function borrarExtra(idx, exIdx){
 }
 async function restaurarExtra(idx, exIdx){
   productos[idx].extras[exIdx].eliminado = false;
+  productos[idx].extras[exIdx].oculto = false;
   await guardar('productos', productos);
   renderProductos();
 }
+async function ocultarExtra(idx, exIdx){
+  productos[idx].extras[exIdx].oculto = true;
+  await guardar('productos', productos);
+  renderProductos();
+}
+function toggleOcultosExtras(idx){
+  if(productosExtrasOcultosAbiertos.has(idx)) productosExtrasOcultosAbiertos.delete(idx);
+  else productosExtrasOcultosAbiertos.add(idx);
+  renderProductos();
+}
+let productosExtrasOcultosAbiertos = new Set();
 
 function renderProductos(){
   const cont = document.getElementById('listaProductos');
@@ -2374,7 +2454,7 @@ function renderProductos(){
   cont.innerHTML = visibles.map((p)=>{
     const idx = p._idx;
     const { costoPieza: costoBase, fuente: fuenteCostoBase } = costoBaseProducto(p);
-    const extrasVisibles = (p.extras||[]).map((e,exIdx)=>({...e,_exIdx:exIdx}));
+    const extrasVisibles = (p.extras||[]).map((e,exIdx)=>({...e,_exIdx:exIdx})).filter(e=>!e.oculto || productosExtrasOcultosAbiertos.has(idx));
     const costoExtras = costoExtrasProducto(p);
     // metodología uniforme: mano de obra e indirectos prorrateados automáticamente, igual que el Lonche
     const costoTotal = costoBase + costoExtras + fijosPza;
@@ -2387,7 +2467,7 @@ function renderProductos(){
     const pctNeto = p.precioVenta>0 ? (margenNeto/p.precioVenta*100) : 0;
 
     const accionesProd = p.eliminado
-      ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarProducto(${idx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarProducto(${idx})">🙈</button>`
+      ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarProducto(${idx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarProducto(${idx})">Ocultar</button>`
       : `<button class="del" onclick="borrarProducto(${idx})">✕</button>`;
 
     return `
@@ -2422,10 +2502,10 @@ function renderProductos(){
       ${extrasVisibles.map((ex)=>{
         const exIdx = ex._exIdx;
         const accionesExtra = ex.eliminado
-          ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarExtra(${idx},${exIdx})">↺</button>`
+          ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarExtra(${idx},${exIdx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarExtra(${idx},${exIdx})">Ocultar</button>`
           : `<button class="del" onclick="borrarExtra(${idx},${exIdx})">✕</button>`;
         return `
-        <div class="extra-row ${ex.eliminado?'fila-eliminada':''}">
+        <div class="extra-row ${ex.eliminado?'fila-eliminada':''}">${ex.eliminado?'<span class="etiqueta-eliminado">Eliminado</span>':''}
           <input type="text" value="${ex.nombre}" ${ex.eliminado?'disabled':''} onchange="actualizarExtra(${idx},${exIdx},'nombre',this.value)">
           <span>$</span>
           <input type="number" step="0.01" value="${ex.costo}" ${ex.eliminado?'disabled':''} onchange="actualizarExtra(${idx},${exIdx},'costo',this.value)">
@@ -2433,6 +2513,7 @@ function renderProductos(){
         </div>
       `;}).join('')}
       <button class="btn secundario chico" style="margin-top:8px;" onclick="agregarExtra(${idx})">+ extra</button>
+      ${(p.extras||[]).filter(e=>e.oculto).length>0 ? `<button class="link-ocultos" onclick="toggleOcultosExtras(${idx})">${productosExtrasOcultosAbiertos.has(idx) ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${(p.extras||[]).filter(e=>e.oculto).length})`}</button>` : ''}
 
       <div class="grid3" style="margin-top:14px;">
         <div class="stat"><div class="num">$${costoBase.toFixed(2)}</div><div class="lbl">Costo base/pza</div></div>
@@ -2500,8 +2581,9 @@ function renderSaludEjecutivo(){
     return anio===anioRef && semana===semanaRef;
   });
   const gananciaSemanaRef = diasSemanaRef.reduce((s,f)=>s+porDia[f],0);
-  const diasCubiertos = diasSemanaRef.filter(f=>porDia[f] >= 0).length;
+  const diasCubiertos = diasSemanaRef.filter(f=>porDia[f] >= costoFijoDiario).length;
   const totalDias = diasSemanaRef.length;
+  const costoFijoSemanal = costoFijoDiario * totalDias;
 
   // semana anterior, para la tendencia
   const lunRef = lunesDeSemana(fechaRef);
@@ -2517,7 +2599,7 @@ function renderSaludEjecutivo(){
   let estado, etiqueta, icono;
   if(gananciaSemanaRef <= 0){
     estado='critico'; etiqueta='No rentable'; icono='🔴';
-  } else if(diasCubiertos < totalDias || gananciaSemanaRef < costoFijoDiario){
+  } else if(diasCubiertos < totalDias || gananciaSemanaRef < costoFijoSemanal){
     estado='alerta'; etiqueta='En alerta'; icono='🟡';
   } else {
     estado='saludable'; etiqueta='Saludable'; icono='🟢';
@@ -2759,50 +2841,84 @@ async function agregarCajaChica(){
 }
 
 async function borrarCajaChica(idx){
-  cajaChica.splice(idx,1);
+  if(!confirm('¿Eliminar este conteo? No se pierde: queda tachado y lo puedes restaurar después.')) return;
+  cajaChica[idx].eliminado = true;
   await guardar('cajaChica', cajaChica);
+  renderCajaChica();
+  toast('Conteo eliminado', `restaurarCajaChica(${idx})`);
+}
+async function restaurarCajaChica(idx){
+  cajaChica[idx].eliminado = false;
+  cajaChica[idx].oculto = false;
+  await guardar('cajaChica', cajaChica);
+  renderCajaChica();
+}
+async function ocultarCajaChica(idx){
+  cajaChica[idx].oculto = true;
+  await guardar('cajaChica', cajaChica);
+  renderCajaChica();
+}
+function toggleOcultosCajaChica(){
+  mostrarOcultosCajaChica = !mostrarOcultosCajaChica;
   renderCajaChica();
 }
 
 function cajaChicaActiva(){
-  return [...cajaChica].sort((a,b)=> a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0));
+  return cajaChica
+    .map((c,idx)=>({...c, idx}))
+    .filter(c=>!c.eliminado)
+    .sort((a,b)=> a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0));
 }
 
 function renderCajaChica(){
   const cont = document.getElementById('listaCajaChica');
   if(!cont) return;
   const ordenados = cajaChicaActiva();
-  if(ordenados.length===0){
+  const visibles = cajaChica
+    .map((c,idx)=>({...c, idx}))
+    .filter(c => !c.oculto || mostrarOcultosCajaChica)
+    .sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
+
+  if(visibles.length===0){
     cont.innerHTML = '<p class="vacio">Aún no hay conteos de caja registrados</p>';
-    return;
-  }
-  const filas = [...ordenados].reverse().map((c,i)=>{
-    const idxReal = cajaChica.indexOf(c);
-    const anterior = ordenados[ordenados.indexOf(c)-1];
-    let comparativo = '';
-    if(anterior){
-      const diff = c.monto - anterior.monto;
-      const signo = diff>0 ? '+' : '';
-      const clase = diff>0 ? 'pos' : (diff<0 ? 'neg' : '');
-      const etiqueta = diff>0 ? 'Excedente vs. semana anterior' : (diff<0 ? 'Diferencia (faltante) vs. semana anterior' : 'Sin cambio vs. semana anterior');
-      comparativo = `<span class="cc-diff ${clase}">${signo}$${diff.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} · ${etiqueta}</span>`;
-    } else {
-      comparativo = '<span class="cc-diff">Primer conteo registrado</span>';
-    }
-    return `
-    <div class="receta-item" style="flex-direction:column; align-items:stretch; gap:4px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <b>${fmtFecha(c.fecha)}</b>
-          <span style="margin-left:8px;">$${c.monto.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
-          ${c.nota ? `<br><small style="color:var(--muted);">${c.nota}</small>` : ''}
+  } else {
+    cont.innerHTML = visibles.map(c=>{
+      let comparativo = '';
+      if(!c.eliminado){
+        const posOrdenados = ordenados.findIndex(o=>o.idx===c.idx);
+        const anterior = posOrdenados>0 ? ordenados[posOrdenados-1] : null;
+        if(anterior){
+          const diff = c.monto - anterior.monto;
+          const signo = diff>0 ? '+' : '';
+          const clase = diff>0 ? 'pos' : (diff<0 ? 'neg' : '');
+          const etiqueta = diff>0 ? 'Excedente vs. semana anterior' : (diff<0 ? 'Diferencia (faltante) vs. semana anterior' : 'Sin cambio vs. semana anterior');
+          comparativo = `<span class="cc-diff ${clase}">${signo}$${diff.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} · ${etiqueta}</span>`;
+        } else {
+          comparativo = '<span class="cc-diff">Primer conteo registrado</span>';
+        }
+      }
+      const acciones = c.eliminado
+        ? `<button class="btn-icon restaurar" title="Restaurar" onclick="restaurarCajaChica(${c.idx})">↺</button><button class="btn-icon ocultar" title="Ocultar de la lista" onclick="ocultarCajaChica(${c.idx})">Ocultar</button>`
+        : `<button class="del" onclick="borrarCajaChica(${c.idx})">✕</button>`;
+      return `
+      <div class="receta-item ${c.eliminado?'fila-eliminada':''}" style="flex-direction:column; align-items:stretch; gap:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <b>${fmtFecha(c.fecha)}</b>${c.eliminado?'<span class="etiqueta-eliminado">Eliminado</span>':''}
+            <span style="margin-left:8px;">$${c.monto.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+            ${c.nota ? `<br><small style="color:var(--muted);">${c.nota}</small>` : ''}
+          </div>
+          ${acciones}
         </div>
-        <button class="del" onclick="borrarCajaChica(${idxReal})">✕</button>
-      </div>
-      ${comparativo}
-    </div>`;
-  }).join('');
-  cont.innerHTML = filas;
+        ${comparativo}
+      </div>`;
+    }).join('');
+  }
+
+  const n = cajaChica.filter(c=>c.oculto).length;
+  cont.innerHTML += n>0
+    ? `<button class="link-ocultos" onclick="toggleOcultosCajaChica()">${mostrarOcultosCajaChica ? 'Ocultar de nuevo los eliminados ocultos' : `Mostrar eliminados ocultos (${n})`}</button>`
+    : '';
 }
 function exportarTodo(){
   const paquete = {
