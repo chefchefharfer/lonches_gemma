@@ -23,6 +23,10 @@
     --border: #E2E7E4;
     --verde: #1F7A4D;
     --verde-bg: #E7F5EC;
+    --azul: #2C6FA0;
+    --azul-bg: #E9F2FA;
+    --ambar: #96660F;
+    --ambar-bg: #FBF1E1;
     --rojo-neg: #C0392B;
     --rojo-bg: #FCEAE7;
     --chip-bg: #EEF1EF;
@@ -327,10 +331,10 @@
   .semana{border:1px solid var(--border); border-radius:8px; margin-bottom:10px; overflow:hidden;}
   .semana-header{
     display:flex; justify-content:space-between; align-items:center;
-    padding:12px 14px; background:var(--bg); cursor:pointer;
+    padding:12px 14px; background:var(--azul-bg); cursor:pointer;
   }
-  .semana-header:hover{background:#EDF0EE;}
-  .semana-header .titulo{font-size:13.5px; font-weight:700; color:var(--text);}
+  .semana-header:hover{background:#DCEAF7;}
+  .semana-header .titulo{font-size:13.5px; font-weight:700; color:var(--azul);}
   .semana-header .titulo small{display:block; font-weight:500; font-size:11px; color:var(--text-2); margin-top:1px;}
   .semana-header .resumen-mini{display:flex; align-items:center; gap:8px;}
   .semana-header .chevron{transition:transform 0.2s; font-size:13px; color:var(--text-2);}
@@ -351,10 +355,10 @@
   .dia-block:first-child{border-top:none;}
   .dia-header{
     display:flex; justify-content:space-between; align-items:center;
-    padding:10px 14px; background:#fff; cursor:pointer;
+    padding:10px 14px; background:var(--verde-bg); cursor:pointer;
   }
-  .dia-header:hover{background:var(--bg);}
-  .dia-titulo{font-size:12.5px; font-weight:700; color:var(--text); text-transform:capitalize;}
+  .dia-header:hover{background:#D8EFE1;}
+  .dia-titulo{font-size:12.5px; font-weight:700; color:var(--verde); text-transform:capitalize;}
   .dia-header .chevron{transition:transform 0.2s; font-size:12px; color:var(--text-2);}
   .dia-block.abierta > .dia-header .chevron{transform:rotate(90deg);}
   .dia-body{max-height:0; overflow:hidden; transition:max-height 0.25s ease; background:#FAFBFA;}
@@ -371,10 +375,10 @@
   .turno-block{border-top:1px dashed var(--border);}
   .turno-header{
     display:flex; justify-content:space-between; align-items:center;
-    padding:8px 14px 8px 24px; cursor:pointer;
+    padding:8px 14px 8px 24px; cursor:pointer; background:var(--ambar-bg);
   }
-  .turno-header:hover{background:var(--chip-bg);}
-  .turno-titulo{font-size:12px; font-weight:600; color:var(--text-2);}
+  .turno-header:hover{background:#F6E7C9;}
+  .turno-titulo{font-size:12px; font-weight:700; color:var(--ambar);}
   .turno-header .chevron{transition:transform 0.2s; font-size:11px; color:var(--text-2);}
   .turno-block.abierta > .turno-header .chevron{transform:rotate(90deg);}
   .turno-body{max-height:0; overflow:hidden; transition:max-height 0.25s ease;}
@@ -601,9 +605,9 @@
           <label>Insumo</label>
           <input type="text" id="c-nombre" list="lista-insumos-conocidos" placeholder="Ej. Carne de cerdo">
           <datalist id="lista-insumos-conocidos"></datalist>
-          <label>Vincular a inventario (opcional)</label>
+          <label>Vincular a un insumo (opcional)</label>
           <select id="c-inventario" onchange="alVincularCompraInventario()">
-            <option value="">Ninguno — no afecta el inventario</option>
+            <option value="">Ninguno — no se vincula a ningún insumo</option>
           </select>
           <div class="grid3">
             <div>
@@ -1418,7 +1422,7 @@ function actualizarDropdownInventarioCompras(){
   if(!sel) return;
   const valorActual = sel.value;
   const activos = inventario.map((item,idx)=>({...item,idx})).filter(item=>!item.eliminado);
-  sel.innerHTML = '<option value="">Ninguno — no afecta el inventario</option>' +
+  sel.innerHTML = '<option value="">Ninguno — no se vincula a ningún insumo</option>' +
     activos.map(item=>`<option value="${item.idx}">${item.nombre} (compras en ${item.unidadCompra||'?'})</option>`).join('');
   if([...sel.options].some(o=>o.value===valorActual)) sel.value = valorActual;
 }
@@ -2087,7 +2091,7 @@ async function agregarCompra(){
   const {anio,semana} = semanaISO(fecha);
   semanasComprasAbiertas.add(claveSemana(anio,semana));
 
-  toast(inventarioIdx !== null ? 'Compra agregada ✓ · sumada al inventario' : 'Compra agregada ✓');
+  toast(inventarioIdx !== null ? 'Compra agregada ✓ · vinculada a su insumo' : 'Compra agregada ✓');
   renderTodo();
 }
 
