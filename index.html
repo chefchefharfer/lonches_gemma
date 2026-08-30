@@ -1222,6 +1222,22 @@ async function init(){
 
   cajaChica = await cargar('cajaChica', []);
 
+  // Migración: ventas de pasteles registradas antes de corregir el bug de
+  // costeo (dividía mal el costo del lote comprado) quedaron con un
+  // margenNeto congelado muy negativo. Se recalculan con la fórmula ya
+  // corregida — el Lonche nunca tuvo este bug, así que no se toca.
+  {
+    let migradoVentas = false;
+    ventas = ventas.map(v=>{
+      if(v.producto !== 'Lonche' && typeof v.margenNeto === 'number' && v.margenNeto < 0){
+        migradoVentas = true;
+        return {...v, margenNeto: margenNetoActual(v.producto)};
+      }
+      return v;
+    });
+    if(migradoVentas) await guardar('ventas', ventas);
+  }
+
   // abrir la semana mas reciente por default (ventas, ganancias y compras)
   if(ventas.length){
     const masReciente = ventas.map(v=>v.fecha).sort().reverse()[0];
