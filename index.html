@@ -508,6 +508,7 @@
   <nav class="sidebar">
     <div class="marca"><span class="logo-emoji">🥪</span><h1>Lonches Gemma</h1></div>
     <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
+    <button class="tab-btn" data-vista="checklist" onclick="cambiarVista('checklist')"><span class="ico">✅</span>Lista</button>
     <button class="tab-btn" data-vista="ganancias" onclick="cambiarVista('ganancias')"><span class="ico">💰</span>Ganancias</button>
     <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
     <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingredientes</button>
@@ -577,6 +578,33 @@
           <button class="btn secundario chico" style="margin-bottom:12px;" onclick="completarTemperaturasFaltantes()">🌡️ Completar temperaturas faltantes</button>
           <div id="listaSemanas"></div>
           <div id="ocultosVentasToggle"></div>
+        </div>
+      </section>
+
+      <!-- CHECKLIST PUESTO AMBULANTE -->
+      <section id="vista-checklist" class="vista">
+        <div class="card">
+          <h2>Checklist para el puesto</h2>
+          <p class="sub">Márcalo antes de salir a vender. Se reinicia solo cuando cambias de turno o de día — nada de esto se pierde ni se sobrescribe con otro dispositivo.</p>
+          <div class="grid2" style="margin-bottom:10px;">
+            <div>
+              <label>Turno</label>
+              <select id="chk-turno" onchange="alCambiarTurnoChecklist()">
+                <option value="Mañana">Mañana</option>
+                <option value="Tarde">Tarde</option>
+              </select>
+            </div>
+            <div>
+              <label>Fecha</label>
+              <input type="date" id="chk-fecha" onchange="alCambiarTurnoChecklist()">
+            </div>
+          </div>
+          <div id="checklistProgreso" class="sub" style="font-weight:bold;"></div>
+          <div id="listaChecklist" style="margin-top:10px;"></div>
+          <div style="display:flex; gap:10px; margin-top:14px;">
+            <button class="btn secundario" onclick="reiniciarChecklist()">↺ Reiniciar (desmarcar todo)</button>
+            <button class="btn secundario chico" onclick="agregarItemChecklist()">+ Agregar artículo</button>
+          </div>
         </div>
       </section>
 
@@ -773,6 +801,7 @@
 
 <nav class="tabs">
   <button class="tab-btn activo" data-vista="ventas" onclick="cambiarVista('ventas')"><span class="ico">🧾</span>Ventas</button>
+  <button class="tab-btn" data-vista="checklist" onclick="cambiarVista('checklist')"><span class="ico">✅</span>Lista</button>
   <button class="tab-btn" data-vista="ganancias" onclick="cambiarVista('ganancias')"><span class="ico">💰</span>Ganan.</button>
   <button class="tab-btn" data-vista="compras" onclick="cambiarVista('compras')"><span class="ico">🛒</span>Compras</button>
   <button class="tab-btn" data-vista="ingredientes" onclick="cambiarVista('ingredientes')"><span class="ico">🥬</span>Ingr.</button>
@@ -797,6 +826,19 @@
   const db = firebase.firestore();
   const auth = firebase.auth();
 
+  // Persistencia offline: guarda una copia local de todo en el propio
+  // celular/navegador. Así, si falla la señal justo al abrir la app (muy
+  // común vendiendo en la calle), Firestore usa esa copia local en vez de
+  // tronar la lectura — y evita que un hueco de señal se confunda otra vez
+  // con "no hay datos guardados".
+  db.enablePersistence({synchronizeTabs:true}).catch(err => {
+    if(err.code === 'failed-precondition'){
+      console.warn('Persistencia offline no se pudo activar: hay otra pestaña abierta con la app. Cierra las demás pestañas para tener respaldo local.');
+    } else if(err.code === 'unimplemented'){
+      console.warn('Este navegador no soporta persistencia offline.');
+    }
+  });
+
   // Autenticación anónima: no pide nada al usuario, solo abre una sesión
   // silenciosa para que Firestore pueda exigir "usuario autenticado" en
   // sus reglas de seguridad. La app espera a que exista sesión antes de
@@ -817,16 +859,44 @@
 <script>
 /* ---------- Almacenamiento persistente (Firebase Firestore) ---------- */
 async function cargar(clave, porDefecto){
-  try{
-    const snap = await db.collection('lonches_gemma').doc(clave).get();
-    if(snap.exists) return snap.data().items;
-    return porDefecto;
-  }catch(e){ console.error('error al cargar', clave, e); return porDefecto; }
+  // IMPORTANTE: si la lectura a Firestore falla (sin internet, permisos,
+  // cuota, etc.) esta función debe PROPAGAR el error (throw), nunca
+  // regresar porDefecto en silencio. Antes, un error de lectura se
+  // confundía con "el documento no existe todavía" y el init() de abajo
+  // terminaba sobrescribiendo los datos reales guardados en Firestore con
+  // los datos semilla (solo la primera semana de agosto) o con arreglos
+  // vacíos — así es como se borraban los ingresos capturados.
+  const snap = await db.collection('lonches_gemma').doc(clave).get();
+  if(snap.exists) return snap.data().items;
+  return porDefecto; // el documento sí se pudo leer y simplemente no existe aún
 }
 async function guardar(clave, valor){
   try{
+    // Salvaguarda anti-sobrescritura: los borrados en esta app son siempre
+    // lógicos (se marca "eliminado:true", nunca se quita del arreglo), así
+    // que la cantidad de registros de una lista NUNCA debería bajar. Si
+    // justo antes de guardar detectamos que en Firestore ya hay MÁS
+    // registros de los que tenemos en esta pantalla, es señal de que otro
+    // dispositivo (tu esposa, otra pestaña) guardó algo más reciente que
+    // aquí no se cargó — en vez de sobrescribir y perderlo, se detiene el
+    // guardado y se avisa.
+    if(Array.isArray(valor)){
+      const snapActual = await db.collection('lonches_gemma').doc(clave).get();
+      if(snapActual.exists){
+        const remoto = snapActual.data().items;
+        if(Array.isArray(remoto) && remoto.length > valor.length){
+          alert(`⚠️ No se guardó tu cambio en "${clave}": hay ${remoto.length - valor.length} registro(s) más recientes guardados desde otro dispositivo/pestaña que esta pantalla no tiene cargados todavía. Para no perderlos, recarga la página (F5) y vuelve a capturar tu cambio.`);
+          return false;
+        }
+      }
+    }
     await db.collection('lonches_gemma').doc(clave).set({items: valor, actualizado: new Date().toISOString()});
-  }catch(e){ console.error('error al guardar', clave, e); }
+    return true;
+  }catch(e){
+    console.error('error al guardar', clave, e);
+    alert(`⚠️ No se pudo guardar tu último cambio en "${clave}" por un problema de conexión. Tus datos anteriores NO se perdieron — solo este último cambio no se guardó todavía. Vuelve a intentarlo cuando tengas señal.`);
+    return false;
+  }
 }
 
 let ventas = [];
@@ -835,6 +905,8 @@ let ingredientes = [];
 let productos = [];
 let inventario = [];
 let cajaChica = [];
+let checklistItems = [];
+let checklistEstado = {fecha:null, turno:null, marcados:[]};
 let semanasAbiertas = new Set();
 let diasAbiertos = new Set();
 let turnosAbiertos = new Set();
@@ -869,6 +941,12 @@ const VENTAS_SEMILLA = [
   {fecha:'2026-08-14', turno:'Mañana', producto:'Chocoflan', cantidad:3, precio:35},
   {fecha:'2026-08-14', turno:'Tarde', producto:'Lonche', cantidad:4, precio:30},
   {fecha:'2026-08-14', turno:'Tarde', producto:'Chocoflan', cantidad:1, precio:35},
+];
+
+const CHECKLIST_SEMILLA = [
+  'Banquitos','Salsa','Pays','Servilletas','Cinta adhesiva','Tijeras','Limpiador',
+  'Bolsas plásticas','Cucharas','Tazas medidoras de media','Aderezo','Jalapeños',
+  'Lonches','Hielos individuales','Un hielo grande para enfriar la hielera','Vasos para lonche'
 ];
 
 const INGREDIENTES_SEMILLA = [
@@ -1176,6 +1254,35 @@ async function init(){
   document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long', day:'numeric', month:'long'});
   alCambiarTurno();
 
+  try{
+    await cargarTodo();
+  }catch(e){
+    console.error('Fallo crítico al cargar datos de Firestore, init abortado para no arriesgar los datos guardados:', e);
+    mostrarErrorCarga();
+    return; // NO seguir: no tocar ventas/compras/etc. ni guardar nada
+  }
+
+  renderConteoProductos();
+  renderIngredientes();
+  renderProductos();
+  renderCajaChica();
+  renderTodo();
+  renderChecklist();
+}
+
+function mostrarErrorCarga(){
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;inset:0;background:#fff3f3;color:#7a1212;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-family:sans-serif;';
+  div.innerHTML = `
+    <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+    <div style="font-size:18px;font-weight:bold;margin-bottom:8px;">No se pudieron cargar los datos</div>
+    <div style="max-width:420px;margin-bottom:16px;">Hubo un problema de conexión con la base de datos. La app se detuvo a propósito para <b>no borrar ninguna venta guardada</b>. Revisa tu internet y vuelve a intentar.</div>
+    <button onclick="location.reload()" style="padding:10px 20px;border-radius:8px;border:none;background:#7a1212;color:#fff;font-size:15px;">Reintentar</button>
+  `;
+  document.body.appendChild(div);
+}
+
+async function cargarTodo(){
   ventas = await cargar('ventas', null);
   if(ventas === null){
     ventas = VENTAS_SEMILLA;
@@ -1256,6 +1363,12 @@ async function init(){
 
   cajaChica = await cargar('cajaChica', []);
 
+  checklistItems = await cargar('checklistItems', null);
+  if(checklistItems === null){ checklistItems = CHECKLIST_SEMILLA; await guardar('checklistItems', checklistItems); }
+
+  checklistEstado = await cargar('checklistEstado', null);
+  if(checklistEstado === null){ checklistEstado = {fecha:hoyISO(), turno:'Mañana', marcados:[]}; }
+
   // Migración de una sola vez: todo lo que hasta ahora se había registrado
   // como "Redes sociales" en realidad eran ventas a Familia — Oz confirmó
   // que por redes sociales todavía no se ha vendido nada. Se usa una bandera
@@ -1308,12 +1421,6 @@ async function init(){
     const {anio,semana} = semanaISO(masRecienteCompra);
     semanasComprasAbiertas.add(claveSemana(anio,semana));
   }
-
-  renderConteoProductos();
-  renderIngredientes();
-  renderProductos();
-  renderCajaChica();
-  renderTodo();
 }
 
 function productosVendibles(){
@@ -1672,6 +1779,7 @@ function cambiarVista(v){
   if(v==='ventas') renderConteoProductos();
   if(v==='ganancias') renderGanancias();
   if(v==='cajachica') renderCajaChica();
+  if(v==='checklist') renderChecklist();
 }
 
 let toastTimer = null;
@@ -2933,7 +3041,8 @@ function exportarTodo(){
     ingredientes: ingredientes,
     productos: productos,
     inventario: inventario,
-    cajaChica: cajaChica
+    cajaChica: cajaChica,
+    checklistItems: checklistItems
   };
   const blob = new Blob([JSON.stringify(paquete, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -2946,6 +3055,84 @@ function exportarTodo(){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('Archivo descargado ✓');
+}
+
+/* ---------- Checklist puesto ambulante ---------- */
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Si cambiaste de turno o de día desde la última vez que se marcó algo,
+// el checklist se reinicia solo (todo desmarcado) para el turno nuevo —
+// pero el estado del turno anterior no se pierde, Firestore solo guarda
+// el estado del turno actual porque cada turno se marca desde cero.
+function checklistCorresponde(fecha, turno){
+  return checklistEstado.fecha === fecha && checklistEstado.turno === turno;
+}
+
+function alCambiarTurnoChecklist(){
+  const turno = document.getElementById('chk-turno').value;
+  const fecha = document.getElementById('chk-fecha').value || hoyISO();
+  if(!checklistCorresponde(fecha, turno)){
+    checklistEstado = {fecha, turno, marcados:[]};
+  }
+  renderChecklist();
+}
+
+async function toggleChecklistItem(item){
+  const turno = document.getElementById('chk-turno').value;
+  const fecha = document.getElementById('chk-fecha').value || hoyISO();
+  if(!checklistCorresponde(fecha, turno)) checklistEstado = {fecha, turno, marcados:[]};
+  const marcados = new Set(checklistEstado.marcados);
+  if(marcados.has(item)) marcados.delete(item); else marcados.add(item);
+  checklistEstado = {fecha, turno, marcados:[...marcados]};
+  await guardar('checklistEstado', checklistEstado);
+  renderChecklist();
+}
+
+async function reiniciarChecklist(){
+  const turno = document.getElementById('chk-turno').value;
+  const fecha = document.getElementById('chk-fecha').value || hoyISO();
+  checklistEstado = {fecha, turno, marcados:[]};
+  await guardar('checklistEstado', checklistEstado);
+  renderChecklist();
+}
+
+async function agregarItemChecklist(){
+  const nombre = prompt('¿Qué artículo quieres agregar a la lista?');
+  if(!nombre || !nombre.trim()) return;
+  if(checklistItems.includes(nombre.trim())){ toast('Ese artículo ya está en la lista'); return; }
+  checklistItems = [...checklistItems, nombre.trim()];
+  await guardar('checklistItems', checklistItems);
+  renderChecklist();
+}
+
+function renderChecklist(){
+  const cont = document.getElementById('listaChecklist');
+  if(!cont) return;
+
+  const selTurno = document.getElementById('chk-turno');
+  const selFecha = document.getElementById('chk-fecha');
+  if(selTurno && !selTurno.value) selTurno.value = checklistEstado.turno || 'Mañana';
+  if(selFecha && !selFecha.value) selFecha.value = checklistEstado.fecha || hoyISO();
+
+  const turno = selTurno ? selTurno.value : (checklistEstado.turno || 'Mañana');
+  const fecha = selFecha ? selFecha.value : (checklistEstado.fecha || hoyISO());
+  const marcados = checklistCorresponde(fecha, turno) ? new Set(checklistEstado.marcados) : new Set();
+
+  const progreso = document.getElementById('checklistProgreso');
+  if(progreso) progreso.textContent = `${marcados.size} / ${checklistItems.length} listos`;
+
+  cont.innerHTML = checklistItems.map(item => {
+    const marcado = marcados.has(item);
+    return `
+    <div class="receta-item" style="align-items:center;">
+      <label style="display:flex; align-items:center; gap:10px; flex:1; cursor:pointer;">
+        <input type="checkbox" ${marcado?'checked':''} style="width:20px; height:20px;" onchange="toggleChecklistItem('${item.replace(/'/g,"\\'")}')">
+        <span style="${marcado ? 'text-decoration:line-through; color:var(--muted);' : ''}">${escHtml(item)}</span>
+      </label>
+    </div>`;
+  }).join('');
 }
 
 window.firebaseListo.then(() => {
