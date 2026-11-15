@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
 <style>
   :root{
     --salsa: #C6362A;
@@ -858,7 +858,14 @@
 </script>
 <script>
 /* ---------- Almacenamiento persistente (Firebase Firestore) ---------- */
+// Copia de todos los documentos leída de un jalón al arrancar (ver cargarTodo).
+// Mientras exista, cargar() la usa en vez de ir a Firestore documento por documento.
+let docsPrecargados = null;
+
 async function cargar(clave, porDefecto){
+  if(docsPrecargados){
+    return Object.prototype.hasOwnProperty.call(docsPrecargados, clave) ? docsPrecargados[clave] : porDefecto;
+  }
   // IMPORTANTE: si la lectura a Firestore falla (sin internet, permisos,
   // cuota, etc.) esta función debe PROPAGAR el error (throw), nunca
   // regresar porDefecto en silencio. Antes, un error de lectura se
@@ -1283,6 +1290,19 @@ function mostrarErrorCarga(){
 }
 
 async function cargarTodo(){
+  // Una sola lectura trae TODOS los documentos de la colección (1 viaje en vez de 9).
+  // Si falla, el error se propaga igual que antes y init() se detiene sin tocar nada.
+  const snapTodos = await db.collection('lonches_gemma').get();
+  docsPrecargados = {};
+  snapTodos.forEach(d => { docsPrecargados[d.id] = d.data().items; });
+  try{
+    await cargarTodoInterno();
+  } finally {
+    docsPrecargados = null; // de aquí en adelante cargar() vuelve a leer directo de Firestore
+  }
+}
+
+async function cargarTodoInterno(){
   ventas = await cargar('ventas', null);
   if(ventas === null){
     ventas = VENTAS_SEMILLA;
@@ -1369,41 +1389,42 @@ async function cargarTodo(){
   checklistEstado = await cargar('checklistEstado', null);
   if(checklistEstado === null){ checklistEstado = {fecha:hoyISO(), turno:'Mañana', marcados:[]}; }
 
-  // Migración de una sola vez: todo lo que hasta ahora se había registrado
-  // como "Redes sociales" en realidad eran ventas a Familia — Oz confirmó
-  // que por redes sociales todavía no se ha vendido nada. Se usa una bandera
-  // guardada para que esto corra UNA sola vez y no le cambie el canal a
-  // ventas reales de Redes sociales que se registren de aquí en adelante.
+  // Migraciones de una sola vez: cada una tiene su bandera guardada en
+  // "migraciones" para que no vuelva a correr en cada carga.
   {
-    const migraciones = await cargar('migraciones', {});
+    const migraciones = await cargar('migraciones', {}) || {};
+    const nuevasBanderas = {...migraciones};
+    let ventasCambiaron = false;
+
+    // Todo lo registrado como "Redes sociales" en realidad eran ventas a
+    // Familia (Oz confirmó que por redes todavía no se había vendido nada).
     if(!migraciones.redesSocialesAFamilia){
-      let migradoCanal = false;
       ventas = ventas.map(v=>{
         if(v.turno==='Redes sociales' || v.canal==='Redes sociales'){
-          migradoCanal = true;
+          ventasCambiaron = true;
           return {...v, turno:'Familia', canal:'Familia'};
         }
         return v;
       });
-      if(migradoCanal) await guardar('ventas', ventas);
-      await guardar('migraciones', {...migraciones, redesSocialesAFamilia:true});
+      nuevasBanderas.redesSocialesAFamilia = true;
     }
-  }
 
-  // Migración: ventas de pasteles registradas antes de corregir el bug de
-  // costeo (dividía mal el costo del lote comprado) quedaron con un
-  // margenNeto congelado muy negativo. Se recalculan con la fórmula ya
-  // corregida — el Lonche nunca tuvo este bug, así que no se toca.
-  {
-    let migradoVentas = false;
-    ventas = ventas.map(v=>{
-      if(v.producto !== 'Lonche' && typeof v.margenNeto === 'number' && v.margenNeto < 0){
-        migradoVentas = true;
-        return {...v, margenNeto: margenNetoActual(v.producto)};
-      }
-      return v;
-    });
-    if(migradoVentas) await guardar('ventas', ventas);
+    // Ventas de pasteles con margenNeto congelado muy negativo por el bug
+    // viejo de costeo: se recalculan UNA sola vez con la fórmula corregida.
+    if(!migraciones.margenPastelesRecalculado){
+      ventas = ventas.map(v=>{
+        if(v.producto !== 'Lonche' && typeof v.margenNeto === 'number' && v.margenNeto < 0){
+          ventasCambiaron = true;
+          return {...v, margenNeto: margenNetoActual(v.producto)};
+        }
+        return v;
+      });
+      nuevasBanderas.margenPastelesRecalculado = true;
+    }
+
+    const guardadoOk = ventasCambiaron ? await guardar('ventas', ventas) : true;
+    const hayBanderasNuevas = Object.keys(nuevasBanderas).length !== Object.keys(migraciones).length;
+    if(guardadoOk && hayBanderasNuevas) await guardar('migraciones', nuevasBanderas);
   }
 
   // abrir la semana mas reciente por default (ventas, ganancias y compras)
@@ -1770,12 +1791,32 @@ function canalDeTurno(turno){
 }
 
 /* ---------- Navegación ---------- */
+/* Chart.js se descarga solo la primera vez que abres Resumen */
+let chartJsPromesa = null;
+function cargarChartJs(){
+  if(window.Chart) return Promise.resolve();
+  if(!chartJsPromesa){
+    chartJsPromesa = new Promise((resolve, reject)=>{
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+      s.onload = resolve;
+      s.onerror = ()=>{ chartJsPromesa = null; reject(new Error('No cargó Chart.js')); };
+      document.head.appendChild(s);
+    });
+  }
+  return chartJsPromesa;
+}
+
 function cambiarVista(v){
   document.querySelectorAll('.vista').forEach(s=>s.classList.remove('activa'));
   document.getElementById('vista-'+v).classList.add('activa');
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('activo'));
   document.querySelectorAll(`.tab-btn[data-vista="${v}"]`).forEach(b=>b.classList.add('activo'));
-  if(v==='resumen'){ renderResumen(); dibujarGraficos(); renderSaludEjecutivo(); }
+  if(v==='resumen'){
+    renderResumen();
+    renderSaludEjecutivo();
+    cargarChartJs().then(dibujarGraficos).catch(()=>toast('No se pudieron cargar las gráficas, revisa tu señal'));
+  }
   if(v==='ventas') renderConteoProductos();
   if(v==='ganancias') renderGanancias();
   if(v==='cajachica') renderCajaChica();
