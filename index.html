@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
 <style>
   :root{
     --salsa: #C6362A;
@@ -405,8 +404,24 @@
   .conteo-precio{font-weight:500; font-size:11.5px; color:var(--text-2);}
   .conteo-resumen{margin-top:8px; font-size:12.5px; font-weight:700; color:var(--verde);}
 
+  /* Tarjetas de conteo retráctiles: cerradas por default, se abren con un toque */
+  .conteo-header{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    width:100%; background:none; border:none; padding:2px 0; margin:0;
+    font-family:inherit; color:var(--text); text-align:left; cursor:pointer;
+  }
+  .conteo-header .conteo-titulo{font-weight:700; font-size:14px;}
+  .conteo-header-der{display:flex; align-items:center; gap:8px; white-space:nowrap;}
+  .conteo-mini{font-size:11px; font-weight:700; background:var(--verde-bg); color:var(--verde); padding:3px 9px; border-radius:999px;}
+  .conteo-mini:empty{display:none;}
+  .conteo-producto .chevron{transition:transform 0.2s; font-size:12px; color:var(--text-2);}
+  .conteo-producto.abierta .chevron{transform:rotate(90deg);}
+  .conteo-body{display:none; margin-top:6px;}
+  .conteo-producto.abierta .conteo-body{display:block;}
+  .conteo-producto.con-datos{border-color:#CFE9DB; background:#FBFEFC;}
+
   /* Contenedores de tarjetas repetibles: fluidos, se acomodan solos según el ancho disponible */
-  #listaConteoProductos{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:10px;}
+  #listaConteoProductos{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:10px; align-items:start;}
   #listaConteoProductos .conteo-producto{margin-top:0;}
   #listaProductos{display:grid; grid-template-columns:repeat(auto-fill, minmax(320px,1fr)); gap:12px;}
   #listaProductos .producto-card{margin-bottom:0;}
@@ -499,6 +514,30 @@
     cursor:pointer; padding:5px 12px; border-radius:999px; font-family:inherit; letter-spacing:0.02em;
   }
   .toast .toast-undo:hover{background:rgba(255,255,255,0.24);}
+
+  /* Meses colapsables (contienen las semanas) */
+  .mes{border:1.5px solid var(--border); border-radius:10px; margin-bottom:12px; overflow:hidden; background:#fff;}
+  .mes-header{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    padding:13px 14px; background:var(--sidebar-bg); color:#fff; cursor:pointer;
+  }
+  .mes-titulo{font-size:14px; font-weight:800; letter-spacing:0.01em;}
+  .mes-header .resumen-mini{display:flex; align-items:center; gap:6px;}
+  .mes-header .pill{background:rgba(255,255,255,0.15); color:#fff;}
+  .mes-header .chevron{transition:transform 0.2s; font-size:13px; color:#CFD8D3;}
+  .mes.abierta > .mes-header .chevron{transform:rotate(90deg);}
+  .mes-body{display:none; padding:10px 10px 0 10px;}
+  .mes.abierta > .mes-body{display:block;}
+
+  /* Comparativo por mes (Resumen) */
+  .tabla-meses-wrap{overflow-x:auto;}
+  .tabla-meses{width:100%; border-collapse:collapse; font-size:12px;}
+  .tabla-meses th{font-size:10.5px; text-transform:uppercase; letter-spacing:0.03em; color:var(--text-2); font-weight:700; text-align:right; padding:6px 5px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  .tabla-meses td{text-align:right; padding:9px 5px; border-bottom:1px solid var(--border); white-space:nowrap;}
+  .tabla-meses th:first-child, .tabla-meses td:first-child{text-align:left;}
+  .tabla-meses tr.mes-sel td{background:var(--verde-bg); font-weight:700;}
+  .tabla-meses td.pos{color:var(--verde); font-weight:700;}
+  .tabla-meses td.neg{color:var(--rojo-neg); font-weight:700;}
 </style>
 </head>
 <body>
@@ -536,7 +575,7 @@
       <section id="vista-ventas" class="vista activa">
         <div class="card">
           <h2>Registrar turno</h2>
-          <p class="sub">Anota cuánto llevaste de cada producto; al final del turno pon lo que sobró y lo que regalaste de cortesía — lo vendido se calcula solo</p>
+          <p class="sub">Toca un producto para abrirlo y anota cuánto llevaste; al final del turno pon lo que sobró y lo que regalaste de cortesía — lo vendido se calcula solo</p>
           <div class="grid2">
             <div>
               <label>Canal / turno</label>
@@ -616,12 +655,13 @@
           <div class="grid2">
             <div class="stat"><div class="num" id="gananciaHoy">$0</div><div class="lbl">Ganancia neta hoy</div></div>
             <div class="stat"><div class="num" id="gananciaSemana">$0</div><div class="lbl">Ganancia neta esta semana</div></div>
+            <div class="stat"><div class="num" id="gananciaMes">$0</div><div class="lbl" id="gananciaMesLbl">Ganancia neta este mes</div></div>
           </div>
         </div>
 
         <div class="card">
           <h2>Ganancias por semana</h2>
-          <p class="sub">Toca una semana para ver el desglose por día y por producto</p>
+          <p class="sub">Toca un mes para ver sus semanas, y una semana para ver el desglose por día y por producto</p>
           <div id="listaGananciasSemanas"></div>
         </div>
       </section>
@@ -757,6 +797,9 @@
 
         <div class="card">
           <h2>Resumen general</h2>
+          <label>Mes</label>
+          <select id="r-mes" onchange="alCambiarMesResumen()"></select>
+          <p class="sub" id="r-mes-nota" style="margin:6px 0 12px 0;"></p>
           <div class="grid2">
             <div class="stat"><div class="num" id="r-piezas">0</div><div class="lbl">Piezas vendidas</div></div>
             <div class="stat"><div class="num" id="r-ingresos">$0</div><div class="lbl">Ingresos totales</div></div>
@@ -765,6 +808,13 @@
           </div>
           <button class="btn secundario" style="margin-top:14px;" onclick="exportarTodo()">⬇️ Exportar todo (para Excel / Claude)</button>
           <p class="sub" style="margin-top:8px;">Descarga un archivo con toda la información de la app: ventas, compras, ingredientes/insumos, productos y caja chica. Súbelo a Claude for Excel y pídele que arme las hojas con esos datos.</p>
+        </div>
+
+        <div class="card">
+          <h2>Comparativo por mes</h2>
+          <p class="sub">Cada mes por separado. Ganancia neta = piezas vendidas × margen neto de cada producto. Flujo = ingresos − compras del mes.</p>
+          <div id="resumenMeses"></div>
+          <div class="chart-wrap"><canvas id="chartMeses" height="200"></canvas></div>
         </div>
 
         <div class="card">
@@ -1147,6 +1197,41 @@ function claveSemana(anio, semana){
   return anio + '-' + String(semana).padStart(2,'0');
 }
 
+/* ---------- Agrupación por mes ---------- */
+const MESES_LARGO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function claveMes(iso){ return (iso||'').slice(0,7); } // "2026-11"
+function nombreMes(clave){ const [y,m] = clave.split('-'); return `${MESES_LARGO[parseInt(m)-1]} ${y}`; }
+function nombreMesCorto(clave){ const [y,m] = clave.split('-'); return `${MESES_CORTO[parseInt(m)-1]} ${y.slice(2)}`; }
+function fmt2(n){ return n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function agruparPorMes(lista, fechaDe){
+  const out = {};
+  lista.forEach(x=>{ const k = claveMes(fechaDe(x)); (out[k] = out[k] || []).push(x); });
+  return out;
+}
+
+/* Qué meses están abiertos en cada pestaña */
+const mesesAbiertos = {ventas:new Set(), compras:new Set(), ganancias:new Set()};
+function toggleMes(seccion, mes){
+  const set = mesesAbiertos[seccion];
+  if(set.has(mes)) set.delete(mes); else set.add(mes);
+  if(seccion==='ventas') renderVentas();
+  if(seccion==='compras') renderCompras();
+  if(seccion==='ganancias') renderGanancias();
+}
+function htmlMes(seccion, mes, pillsHtml, cuerpoHtml){
+  const abierto = mesesAbiertos[seccion].has(mes);
+  return `
+    <div class="mes ${abierto?'abierta':''}">
+      <div class="mes-header" onclick="toggleMes('${seccion}','${mes}')">
+        <div class="mes-titulo">${nombreMes(mes)}</div>
+        <div class="resumen-mini">${pillsHtml}<span class="chevron">▶</span></div>
+      </div>
+      <div class="mes-body">${cuerpoHtml}</div>
+    </div>
+  `;
+}
+
 /* ---------- Costeo dinámico: el costo de cada insumo/producto se calcula
    siempre a partir de la COMPRA MÁS RECIENTE registrada en "compras", no de
    un número capturado a mano. Así, en cuanto se registra una compra nueva,
@@ -1433,6 +1518,8 @@ async function cargarTodoInterno(){
     const {anio,semana} = semanaISO(masReciente);
     semanasAbiertas.add(claveSemana(anio,semana));
     semanasGananciasAbiertas.add(claveSemana(anio,semana));
+    mesesAbiertos.ventas.add(claveMes(masReciente));
+    mesesAbiertos.ganancias.add(claveMes(masReciente));
     diasAbiertos.add(masReciente);
     turnosAbiertos.add(masReciente+'|Mañana');
     turnosAbiertos.add(masReciente+'|Tarde');
@@ -1441,6 +1528,7 @@ async function cargarTodoInterno(){
     const masRecienteCompra = compras.map(c=>c.fecha).sort().reverse()[0];
     const {anio,semana} = semanaISO(masRecienteCompra);
     semanasComprasAbiertas.add(claveSemana(anio,semana));
+    mesesAbiertos.compras.add(claveMes(masRecienteCompra));
   }
 }
 
@@ -1731,33 +1819,83 @@ function renderDetalleInsumo(idx){
   `;
 }
 
+/* Qué tarjetas de conteo están abiertas (por nombre de producto) */
+let conteoAbiertos = new Set();
+const CAMPOS_CONTEO = ['llevaste','sobraron','cortesia','merma'];
+
 function renderConteoProductos(){
   const cont = document.getElementById('listaConteoProductos');
   if(!cont) return;
+
+  // Conserva lo que ya estaba capturado antes de redibujar (antes se perdía
+  // al cambiar de pestaña o al editar Ingredientes/Productos).
+  const capturado = {};
+  cont.querySelectorAll('.conteo-producto').forEach(card=>{
+    const nombre = card.dataset.producto;
+    const idxViejo = card.dataset.idx;
+    capturado[nombre] = {};
+    CAMPOS_CONTEO.forEach(c=>{
+      const el = document.getElementById(`t-${c}-${idxViejo}`);
+      if(el && el.value !== '') capturado[nombre][c] = el.value;
+    });
+  });
+
   const lista = productosVendibles();
-  cont.innerHTML = lista.map((p,idx)=>`
-    <div class="conteo-producto">
-      <div class="conteo-nombre">${p.nombre} <span class="conteo-precio">$${p.precio}/pza</span></div>
-      <div class="grid3">
-        <div>
-          <label>Llevaste</label>
-          <input type="number" min="0" id="t-llevaste-${idx}" placeholder="0" oninput="actualizarResumenConteo(${idx})">
+  cont.innerHTML = lista.map((p,idx)=>{
+    const abierta = conteoAbiertos.has(p.nombre);
+    const prev = capturado[p.nombre] || {};
+    const val = c => prev[c] !== undefined ? `value="${escHtml(prev[c])}"` : '';
+    return `
+    <div class="conteo-producto ${abierta?'abierta':''}" id="t-card-${idx}" data-idx="${idx}" data-producto="${escHtml(p.nombre)}">
+      <button type="button" class="conteo-header" onclick="toggleConteo(${idx})">
+        <span class="conteo-titulo">${escHtml(p.nombre)} <span class="conteo-precio">$${p.precio}/pza</span></span>
+        <span class="conteo-header-der">
+          <span class="conteo-mini" id="t-mini-${idx}"></span>
+          <span class="chevron">▶</span>
+        </span>
+      </button>
+      <div class="conteo-body">
+        <div class="grid3">
+          <div>
+            <label>Llevaste</label>
+            <input type="number" min="0" inputmode="numeric" id="t-llevaste-${idx}" placeholder="0" ${val('llevaste')} oninput="actualizarResumenConteo(${idx})">
+          </div>
+          <div>
+            <label>Sobraron</label>
+            <input type="number" min="0" inputmode="numeric" id="t-sobraron-${idx}" placeholder="0" ${val('sobraron')} oninput="actualizarResumenConteo(${idx})">
+          </div>
+          <div>
+            <label>Cortesía</label>
+            <input type="number" min="0" inputmode="numeric" id="t-cortesia-${idx}" placeholder="0" ${val('cortesia')} oninput="actualizarResumenConteo(${idx})">
+          </div>
         </div>
-        <div>
-          <label>Sobraron</label>
-          <input type="number" min="0" id="t-sobraron-${idx}" placeholder="0" oninput="actualizarResumenConteo(${idx})">
-        </div>
-        <div>
-          <label>Cortesía</label>
-          <input type="number" min="0" id="t-cortesia-${idx}" placeholder="0" oninput="actualizarResumenConteo(${idx})">
-        </div>
+        <label>De lo que sobró, ¿cuánto se tiró (merma real, no lo que guardaste para vender después)?</label>
+        <input type="number" min="0" inputmode="numeric" id="t-merma-${idx}" placeholder="0" ${val('merma')} oninput="actualizarResumenConteo(${idx})">
+        <div class="conteo-resumen" id="t-resumen-${idx}">Vendiste: 0 · $0</div>
       </div>
-      <label>De lo que sobró, ¿cuánto se tiró (merma real, no lo que guardaste para vender después)?</label>
-      <input type="number" min="0" id="t-merma-${idx}" placeholder="0" oninput="actualizarResumenConteo(${idx})">
-      <div class="conteo-resumen" id="t-resumen-${idx}">Vendiste: 0 · $0</div>
     </div>
-  `).join('');
+  `;}).join('');
   lista.forEach((p,idx)=>actualizarResumenConteo(idx));
+}
+
+function toggleConteo(idx){
+  const card = document.getElementById(`t-card-${idx}`);
+  if(!card) return;
+  const nombre = card.dataset.producto;
+  const abrir = !card.classList.contains('abierta');
+  card.classList.toggle('abierta', abrir);
+  if(abrir){
+    conteoAbiertos.add(nombre);
+    const primero = document.getElementById(`t-llevaste-${idx}`);
+    if(primero && primero.value==='') primero.focus();
+  } else {
+    conteoAbiertos.delete(nombre);
+  }
+}
+
+function cerrarTodosLosConteos(){
+  conteoAbiertos.clear();
+  document.querySelectorAll('#listaConteoProductos .conteo-producto').forEach(c=>c.classList.remove('abierta'));
 }
 
 function actualizarResumenConteo(idx){
@@ -1775,6 +1913,13 @@ function actualizarResumenConteo(idx){
   const guardable = sobraron - merma;
   const txtMerma = merma > 0 ? ` · Merma real: ${merma}${guardable>0 ? ` · Se guarda para después: ${guardable}` : ''}` : '';
   document.getElementById(`t-resumen-${idx}`).textContent = `Vendiste: ${vendiste} · $${(vendiste*p.precio).toLocaleString()}${txtMerma}`;
+
+  // Resumen visible aunque la tarjeta esté cerrada
+  const mini = document.getElementById(`t-mini-${idx}`);
+  const card = document.getElementById(`t-card-${idx}`);
+  const hayDatos = llevaste > 0;
+  if(mini) mini.textContent = hayDatos ? `${vendiste} pzas · $${(vendiste*p.precio).toLocaleString()}` : '';
+  if(card) card.classList.toggle('con-datos', hayDatos);
 }
 
 function alCambiarTurno(){
@@ -1890,10 +2035,13 @@ async function registrarTurno(){
     actualizarResumenConteo(idx);
   });
   if(document.getElementById('t-hora')) document.getElementById('t-hora').value = '';
+  cerrarTodosLosConteos();
 
   const {anio,semana} = semanaISO(fecha);
   semanasAbiertas.add(claveSemana(anio,semana));
   semanasGananciasAbiertas.add(claveSemana(anio,semana));
+  mesesAbiertos.ventas.add(claveMes(fecha));
+  mesesAbiertos.ganancias.add(claveMes(fecha));
 
   toast(temp !== null ? `Turno registrado ✓ · ${temp}°C` : 'Turno registrado ✓');
   renderTodo();
@@ -1951,8 +2099,11 @@ function renderVentas(){
   const visibles = ventas.map((v,i)=>({...v,i})).filter(v=>!v.oculto || mostrarOcultosVentas);
   if(visibles.length===0){ cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>'; }
   else{
+    const porMesV = agruparPorMes(visibles, v=>v.fecha);
+    cont.innerHTML = Object.keys(porMesV).sort().reverse().map(mes=>{
+    const itemsMes = porMesV[mes];
     const semGrupos = {};
-    visibles.forEach(v=>{
+    itemsMes.forEach(v=>{
       const {anio,semana} = semanaISO(v.fecha);
       const claveSem = claveSemana(anio,semana);
       if(!semGrupos[claveSem]) semGrupos[claveSem] = {anio, semana, items:[], lun:lunesDeSemana(v.fecha), vie:viernesDeSemana(v.fecha)};
@@ -1960,7 +2111,7 @@ function renderVentas(){
     });
     const clavesSem = Object.keys(semGrupos).sort().reverse();
 
-    cont.innerHTML = clavesSem.map(claveSem=>{
+    const semanasHtml = clavesSem.map(claveSem=>{
       const g = semGrupos[claveSem];
       const piezasSem = g.items.filter(v=>!v.eliminado).reduce((s,v)=>s+v.cantidad,0);
       const ingresoSem = g.items.filter(v=>!v.eliminado).reduce((s,v)=>s+v.cantidad*v.precio,0);
@@ -2099,6 +2250,11 @@ function renderVentas(){
         </div>
       `;
     }).join('');
+    const actMes = itemsMes.filter(v=>!v.eliminado);
+    const pzMes = actMes.reduce((s,v)=>s+v.cantidad,0);
+    const ingMes = actMes.reduce((s,v)=>s+v.cantidad*v.precio,0);
+    return htmlMes('ventas', mes, `<span class="pill">${pzMes} pzas</span><span class="pill">$${ingMes.toLocaleString()}</span>`, semanasHtml);
+    }).join('');
   }
 
   const hoy = hoyISO();
@@ -2131,8 +2287,10 @@ function renderGanancias(){
   if(ventasG.length===0){
     cont.innerHTML = '<p class="vacio">Sin ventas registradas todavía</p>';
   } else {
+    const porMesG = agruparPorMes(ventasG, v=>v.fecha);
+    cont.innerHTML = Object.keys(porMesG).sort().reverse().map(mes=>{
     const semGrupos = {};
-    ventasG.forEach(v=>{
+    porMesG[mes].forEach(v=>{
       const ganancia = v.cantidad * margenNetoVenta(v);
       const {anio,semana} = semanaISO(v.fecha);
       const claveSem = claveSemana(anio,semana);
@@ -2147,7 +2305,7 @@ function renderGanancias(){
 
     const clavesSem = Object.keys(semGrupos).sort().reverse();
 
-    cont.innerHTML = clavesSem.map(claveSem=>{
+    const semanasHtml = clavesSem.map(claveSem=>{
       const g = semGrupos[claveSem];
       const abiertaSem = semanasGananciasAbiertas.has(claveSem);
       const fechasOrdenadas = Object.keys(g.dias).sort().reverse();
@@ -2197,6 +2355,10 @@ function renderGanancias(){
         </div>
       `;
     }).join('');
+    const gananciaMes = Object.values(semGrupos).reduce((s,g)=>s+g.total,0);
+    const pzMes = porMesG[mes].reduce((s,v)=>s+v.cantidad,0);
+    return htmlMes('ganancias', mes, `<span class="pill">${pzMes} pzas</span><span class="pill">$${fmt2(gananciaMes)}</span>`, semanasHtml);
+    }).join('');
   }
 
   const hoy = hoyISO();
@@ -2211,6 +2373,13 @@ function renderGanancias(){
   });
   const gananciaSemana = deSemanaActual.reduce((s,v)=>s + v.cantidad*margenNetoVenta(v), 0);
   document.getElementById('gananciaSemana').textContent = '$'+gananciaSemana.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  const mesHoy = claveMes(hoy);
+  const gananciaMesActual = ventasActivas().filter(v=>claveMes(v.fecha)===mesHoy).reduce((s,v)=>s + v.cantidad*margenNetoVenta(v), 0);
+  const elMes = document.getElementById('gananciaMes');
+  if(elMes) elMes.textContent = '$'+fmt2(gananciaMesActual);
+  const elMesLbl = document.getElementById('gananciaMesLbl');
+  if(elMesLbl) elMesLbl.textContent = 'Ganancia neta ' + nombreMes(mesHoy).toLowerCase();
 }
 
 /* ---------- Compras ---------- */
@@ -2239,6 +2408,7 @@ async function agregarCompra(){
 
   const {anio,semana} = semanaISO(fecha);
   semanasComprasAbiertas.add(claveSemana(anio,semana));
+  mesesAbiertos.compras.add(claveMes(fecha));
 
   toast(inventarioIdx !== null ? 'Compra agregada ✓ · vinculada a su insumo' : 'Compra agregada ✓');
   renderTodo();
@@ -2308,8 +2478,10 @@ function renderCompras(){
   if(visiblesCompras.length===0){
     cont.innerHTML = '<p class="vacio">Sin compras registradas todavía</p>';
   } else {
+    const porMesC = agruparPorMes(visiblesCompras, c=>c.fecha);
+    cont.innerHTML = Object.keys(porMesC).sort().reverse().map(mes=>{
     const grupos = {};
-    visiblesCompras.forEach(c=>{
+    porMesC[mes].forEach(c=>{
       const {anio,semana} = semanaISO(c.fecha);
       const clave = claveSemana(anio,semana);
       if(!grupos[clave]) grupos[clave] = {anio, semana, items:[], lun:lunesDeSemana(c.fecha), vie:viernesDeSemana(c.fecha), total:0};
@@ -2317,7 +2489,7 @@ function renderCompras(){
       if(!c.eliminado) grupos[clave].total += c.costo;
     });
     const claves = Object.keys(grupos).sort().reverse();
-    cont.innerHTML = claves.map(clave=>{
+    const semanasHtml = claves.map(clave=>{
       const g = grupos[clave];
       const abierta = semanasComprasAbiertas.has(clave);
       const itemsOrdenados = g.items.slice().sort((a,b)=> a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0));
@@ -2368,6 +2540,9 @@ function renderCompras(){
           </div>
         </div>
       `;
+    }).join('');
+    const gastoMes = porMesC[mes].filter(c=>!c.eliminado).reduce((s,c)=>s+c.costo,0);
+    return htmlMes('compras', mes, `<span class="pill">$${gastoMes.toLocaleString()}</span>`, semanasHtml);
     }).join('');
   }
   document.getElementById('totalCompras').textContent = '$'+comprasActivas().reduce((s,c)=>s+c.costo,0).toLocaleString();
@@ -2697,14 +2872,86 @@ function renderProductos(){
 }
 
 /* ---------- Resumen ---------- */
+/* Mes elegido en Resumen: null = todavía no elegido (se usa el más
+   reciente con datos); '' = todo el historial; "2026-11" = ese mes. */
+let mesResumenSel = null;
+function mesesConDatos(){
+  const set = new Set([...ventasActivas().map(v=>claveMes(v.fecha)), ...comprasActivas().map(c=>claveMes(c.fecha))]);
+  return [...set].filter(Boolean).sort().reverse();
+}
+function ventasResumen(){ return mesResumenSel ? ventasActivas().filter(v=>claveMes(v.fecha)===mesResumenSel) : ventasActivas(); }
+function comprasResumen(){ return mesResumenSel ? comprasActivas().filter(c=>claveMes(c.fecha)===mesResumenSel) : comprasActivas(); }
+
+function alCambiarMesResumen(){
+  mesResumenSel = document.getElementById('r-mes').value;
+  renderResumen();
+  if(document.getElementById('vista-resumen')?.classList.contains('activa')){
+    cargarChartJs().then(dibujarGraficos).catch(()=>toast('No se pudieron cargar las gráficas, revisa tu señal'));
+  }
+}
+
+/* Totales por mes (de más reciente a más antiguo) */
+function datosMensuales(){
+  const m = {};
+  const fila = k => (m[k] = m[k] || {mes:k, piezas:0, ingresos:0, gastos:0, ganancia:0});
+  ventasActivas().forEach(v=>{
+    const f = fila(claveMes(v.fecha));
+    f.piezas += v.cantidad;
+    f.ingresos += v.cantidad*v.precio;
+    f.ganancia += v.cantidad*margenNetoVenta(v);
+  });
+  comprasActivas().forEach(c=>{ fila(claveMes(c.fecha)).gastos += c.costo; });
+  return Object.values(m).filter(f=>f.mes).sort((a,b)=> a.mes < b.mes ? 1 : -1);
+}
+
+function renderResumenMensual(){
+  const cont = document.getElementById('resumenMeses');
+  if(!cont) return;
+  const datos = datosMensuales();
+  if(datos.length===0){ cont.innerHTML = '<p class="vacio">Sin datos todavía</p>'; return; }
+  cont.innerHTML = `
+    <div class="tabla-meses-wrap">
+      <table class="tabla-meses">
+        <thead><tr><th>Mes</th><th>Piezas</th><th>Ingresos</th><th>Compras</th><th>Ganancia neta</th><th>Flujo</th></tr></thead>
+        <tbody>
+          ${datos.map(f=>{
+            const flujo = f.ingresos - f.gastos;
+            return `<tr class="${f.mes===mesResumenSel?'mes-sel':''}">
+              <td>${nombreMesCorto(f.mes)}</td>
+              <td>${f.piezas}</td>
+              <td>$${f.ingresos.toLocaleString()}</td>
+              <td>$${f.gastos.toLocaleString()}</td>
+              <td class="${f.ganancia>=0?'pos':'neg'}">$${fmt2(f.ganancia)}</td>
+              <td class="${flujo>=0?'pos':'neg'}">$${flujo.toLocaleString()}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderResumen(){
-  const piezas = ventasActivas().reduce((s,v)=>s+v.cantidad,0);
-  const ingresos = ventasActivas().reduce((s,v)=>s+v.cantidad*v.precio,0);
-  const gastos = comprasActivas().reduce((s,c)=>s+c.costo,0);
+  const meses = mesesConDatos();
+  if(mesResumenSel === null || (mesResumenSel && !meses.includes(mesResumenSel))) mesResumenSel = meses[0] || '';
+  const sel = document.getElementById('r-mes');
+  if(sel){
+    sel.innerHTML = meses.map(m=>`<option value="${m}">${nombreMes(m)}</option>`).join('') + '<option value="">Todo el historial</option>';
+    sel.value = mesResumenSel;
+  }
+  const nota = document.getElementById('r-mes-nota');
+  if(nota) nota.textContent = mesResumenSel
+    ? `Mostrando solo ${nombreMes(mesResumenSel)} — las gráficas de abajo también.`
+    : 'Mostrando todo el historial acumulado.';
+
+  const piezas = ventasResumen().reduce((s,v)=>s+v.cantidad,0);
+  const ingresos = ventasResumen().reduce((s,v)=>s+v.cantidad*v.precio,0);
+  const gastos = comprasResumen().reduce((s,c)=>s+c.costo,0);
   document.getElementById('r-piezas').textContent = piezas;
   document.getElementById('r-ingresos').textContent = '$'+ingresos.toLocaleString();
   document.getElementById('r-gastos').textContent = '$'+gastos.toLocaleString();
   document.getElementById('r-ganancia').textContent = '$'+(ingresos-gastos).toLocaleString();
+  renderResumenMensual();
   renderSaludEjecutivo();
 }
 
@@ -2827,7 +3074,7 @@ function dibujarGraficos(){
   const porDiaTurno = {};
   const porProducto = {};
   const porCanal = {'Puesto ambulante':0, 'Familia':0, 'Redes sociales':0, 'Pedido directo':0};
-  ventasActivas().forEach(v=>{
+  ventasResumen().forEach(v=>{
     porDia[v.fecha] = (porDia[v.fecha]||0) + v.cantidad;
     if(!porDiaTurno[v.fecha]) porDiaTurno[v.fecha] = {'Mañana':0,'Tarde':0};
     if(v.turno==='Mañana' || v.turno==='Tarde') porDiaTurno[v.fecha][v.turno] = (porDiaTurno[v.fecha][v.turno]||0) + v.cantidad;
@@ -2897,6 +3144,22 @@ function dibujarGraficos(){
     options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}} }
   });
 
+  // Comparativo mensual (siempre todos los meses, del más antiguo al más reciente)
+  if(charts.meses) charts.meses.destroy();
+  const cvMeses = document.getElementById('chartMeses');
+  if(cvMeses){
+    const dm = datosMensuales().slice().reverse();
+    charts.meses = new Chart(cvMeses, {
+      type:'bar',
+      data:{ labels: dm.map(f=>nombreMesCorto(f.mes)), datasets:[
+        {label:'Ingresos', data:dm.map(f=>f.ingresos), backgroundColor:paleta.naranjaClaro, borderRadius:4, maxBarThickness:26},
+        {label:'Compras', data:dm.map(f=>f.gastos), backgroundColor:paleta.cafe, borderRadius:4, maxBarThickness:26},
+        {label:'Ganancia neta', data:dm.map(f=>Math.round(f.ganancia*100)/100), backgroundColor:paleta.salsa, borderRadius:4, maxBarThickness:26}
+      ] },
+      options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:12,font:{size:11}}}}, scales:{ y:{beginAtZero:true} } }
+    });
+  }
+
   dibujarGraficosPorProducto();
 }
 
@@ -2909,7 +3172,7 @@ function dibujarGraficosPorProducto(){
   Object.values(chartsProducto).forEach(c=>c.destroy());
   chartsProducto = {};
 
-  const activas = ventasActivas();
+  const activas = ventasResumen();
   const nombres = Array.from(new Set(activas.map(v=>v.producto))).sort((a,b)=>{
     if(a==='Lonche') return -1;
     if(b==='Lonche') return 1;
